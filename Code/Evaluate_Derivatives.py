@@ -1,4 +1,5 @@
 from typing import Tuple, List;
+import torch;
 
 from Network import Neural_Network;
 
@@ -143,9 +144,9 @@ def Evaluate_Derivatives(
         # D_{xi} U(t_i, x_i, y_i), and (i, 2) entry holds
         # D_{yi} U(t_i, x_i, y_i).
         Grad_U = torch.autograd.grad(
-                    outputs         = Dxn_U[0][:, 0],
+                    outputs         = Dxyn_U[0][:, 0],
                     inputs          = Coords,
-                    grad_outputs    = torch.ones_like(Dxn_U[0][:, 0]),
+                    grad_outputs    = torch.ones_like(Dxyn_U[0][:, 0]),
                     retain_graph    = True,
                     create_graph    = True)[0];
 
