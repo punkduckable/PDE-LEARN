@@ -17,6 +17,7 @@ import random;
 import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
+from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Array;
 
 
 
@@ -200,6 +201,62 @@ class Test_Eval_Deriv(unittest.TestCase):
             for j in range(k + 1):
                 for i in range(Num_Coords):
                     self.assertLess(abs(Dxyn_P_true[k][i, j].item() - Dxyn_P[k][i,j].item()), epsilon);
+
+
+
+class xy_Derivatives_And_Index(unittest.TestCase):
+    def test_xy_Derivatives_to_Index(self):
+        # Test that the function gives the expected output for derivatives of
+        # order <= 3.
+
+        # Order 0
+        self.assertEqual(xy_Derivatives_To_Index(0, 0), 0);
+
+        # Order 1
+        self.assertEqual(xy_Derivatives_To_Index(1, 0), 1);
+        self.assertEqual(xy_Derivatives_To_Index(0, 1), 2);
+
+        # Order 2
+        self.assertEqual(xy_Derivatives_To_Index(2, 0), 3);
+        self.assertEqual(xy_Derivatives_To_Index(1, 1), 4);
+        self.assertEqual(xy_Derivatives_To_Index(0, 2), 5);
+
+        # Order 3
+        self.assertEqual(xy_Derivatives_To_Index(3, 0), 6);
+        self.assertEqual(xy_Derivatives_To_Index(2, 1), 7);
+        self.assertEqual(xy_Derivatives_To_Index(1, 2), 8);
+        self.assertEqual(xy_Derivatives_To_Index(0, 3), 9);
+
+    def test_Index_To_xy_Derivatives_Array(self):
+        # Generate a partial inverse, then test that this inverse actually
+        # works.
+
+        # First, pick a random index (with a reasonable value).
+        Max_Derivatives : int = random.randrange(0, 10);
+
+        # Now generate the inverse list.
+        Inverse = Index_to_xy_Derivatives_Array(Max_Derivatives);
+
+        # Determine maximum index value that we inverted.
+        N = Inverse.shape[0];
+
+        # Check that Inverse composed with xy_Derivatives_To_Index is the identity.
+        for k in range(N):
+            i : int = Inverse[k, 0].item();
+            j : int = Inverse[k, 1].item();
+            self.assertEqual(k, xy_Derivatives_To_Index(i, j));
+
+        # check that xy_Derivatives_To_Index composed with Inverse is the identity.
+        for k in range(0, Max_Derivatives):
+            for j in range(0, k + 1):
+                i : int = k - j;        # Number of x derivatives.
+
+                index : int = xy_Derivatives_To_Index(i, j);
+                Inv_Index = Inverse[index, :];
+
+                self.assertEqual(Inverse[index, 0].item(), i);
+                self.assertEqual(Inverse[index, 1].item(), j);
+
 
 if __name__ == "__main__":
     unittest.main();
