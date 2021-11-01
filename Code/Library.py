@@ -96,67 +96,67 @@ def Index_to_xy_Derivatives_Array(Max_Derivatives : int):
 
 
 def Num_Multi_Indices(
-        num_sub_index_values : int,
-        num_sub_indices      : int,
+        Num_Sub_Index_Values : int,
+        Num_Sub_Indices      : int,
         sub_index            : int = 0,
         sub_index_value      : int = 0,
         counter              : int = 0) -> int:
     """ This function determines the number of "distinct" multi-indices of
-    specified num_sub_indices whose sub-indices take values in {0, 1...
-    num_sub_index_values - 1}. Here, two multi-indices are "equal" if and only
+    specified Num_Sub_Indices whose sub-indices take values in {0, 1...
+    Num_Sub_Index_Values - 1}. Here, two multi-indices are "equal" if and only
     if there is a way to rearrange the sub-indices in one multi-index to match
     the others (both have the same value in each sub-index). This defines an
     equivalence relation of multi-indices. Thus, we are essentially finding the
     number of classes under this relation.
 
-    For example, if num_sub_index_values = 4 and num_sub_indices = 2, then the
+    For example, if Num_Sub_Index_Values = 4 and Num_Sub_Indices = 2, then the
     set of possible multi-indices is { (0, 0), (0, 1), (0, 2), (0, 3), (1, 1),
     (1, 2), (1, 3), (2, 2), (2, 3), (3, 3) }, which contains 10 elements. Thus,
     in this case, this function would return 10.
 
-    Note: we assume that num_sub_indices and num_sub_index_values are POSITIVE
+    Note: we assume that Num_Sub_Indices and Num_Sub_Index_Values are POSITIVE
     integers.
 
     ----------------------------------------------------------------------------
     Arguments:
 
-    num_sub_index_values: The number of distinct values that any one of the
-    sub-indices can take on. If num_sub_index_values = k, then each sub-index
+    Num_Sub_Index_Values: The number of distinct values that any one of the
+    sub-indices can take on. If Num_Sub_Index_Values = k, then each sub-index
     can take on values 0, 1,... k-1.
 
-    num_sub_indices: The number of sub-indices in the multi-index.
+    Num_Sub_Indices: The number of sub-indices in the multi-index.
 
     sub_index: keeps track of which sub-index we're working on.
 
     sub_index_value: specifies which value we put in a particular sub-index.
 
     counter: stores the total number of multi-indices of specified oder whose
-    sub-indices take values in 0, 1... num_sub_index_values - 1. We ultimately
+    sub-indices take values in 0, 1... Num_Sub_Index_Values - 1. We ultimately
     return this variable. It's passed as an argument for recursion.
 
     ----------------------------------------------------------------------------
     Returns:
 
     The total number of "distinct" multi-indices (as defined above) which have
-    num_sub_indices sub-indices, each of which takes values in {0, 1,...
-    num_sub_index_values - 1}. """
+    Num_Sub_Indices sub-indices, each of which takes values in {0, 1,...
+    Num_Sub_Index_Values - 1}. """
 
     # Assertions.
-    assert (num_sub_indices > 0), \
-        ("num_sub_indices must be a POSITIVE integer. Got %d." % num_sub_indices);
-    assert (num_sub_index_values > 0), \
-        ("num_sub_index_values must be a POSITIVE integer. Got %d." % num_sub_index_values);
+    assert (Num_Sub_Indices > 0), \
+        ("Num_Sub_Indices must be a POSITIVE integer. Got %d." % Num_Sub_Indices);
+    assert (Num_Sub_Index_Values > 0), \
+        ("Num_Sub_Index_Values must be a POSITIVE integer. Got %d." % Num_Sub_Index_Values);
 
     # Base case
-    if (sub_index == num_sub_indices - 1):
-        return counter + (num_sub_index_values - sub_index_value);
+    if (sub_index == Num_Sub_Indices - 1):
+        return counter + (Num_Sub_Index_Values - sub_index_value);
 
     # Recursive case.
-    else : # if (sub_index < num_sub_indices - 1):
-        for j in range(sub_index_value, num_sub_index_values):
+    else : # if (sub_index < Num_Sub_Indices - 1):
+        for j in range(sub_index_value, Num_Sub_Index_Values):
             counter = Num_Multi_Indices(
-                        num_sub_index_values = num_sub_index_values,
-                        num_sub_indices      = num_sub_indices,
+                        Num_Sub_Index_Values = Num_Sub_Index_Values,
+                        Num_Sub_Indices      = Num_Sub_Indices,
                         sub_index            = sub_index + 1,
                         sub_index_value      = j,
                         counter              = counter);
@@ -166,31 +166,31 @@ def Num_Multi_Indices(
 
 
 def Multi_Indices_Array(
-        multi_indices        : numpy.array,
-        num_sub_index_values : int,
-        num_sub_indices      : int,
+        Multi_Indices        : numpy.array,
+        Num_Sub_Index_Values : int,
+        Num_Sub_Indices      : int,
         sub_index            : int = 0,
         sub_index_value      : int = 0,
         position             : int = 0) -> int:
     """ This function finds the set of "distinct" multi-indices with
-    num_sub_indices sub-indices such that each sub-index takes values in
-    {0, 1,... num_sub_index_values - 1}. Here, two multi-indices are "equal" if
+    Num_Sub_Indices sub-indices such that each sub-index takes values in
+    {0, 1,... Num_Sub_Index_Values - 1}. Here, two multi-indices are "equal" if
     and only if there is a way to rearrange the sub-indices in one multi-index
     to match the others (both have the same value in each sub-index). This
     defines an equivalence relation. Thus, we return a representative for each
     class.
 
-    We assume that multi_indices is an N by num_sub_indices array, where N is
+    We assume that Multi_Indices is an N by Num_Sub_Indices array, where N is
     "sufficiently large" (meaning that N is at least as large as the value
-    returned by Recursive_Counter with the num_sub_index_values and
-    num_sub_indices arguments). This function populates the rows of
-    multi_indices. The i,j element of multi_indices contains the value of the
+    returned by Recursive_Counter with the Num_Sub_Index_Values and
+    Num_Sub_Indices arguments). This function populates the rows of
+    Multi_Indices. The i,j element of Multi_Indices contains the value of the
     jth sub-index of the ith "distinct" (as defined above) multi-index.
 
-    For example, if num_sub_index_values = 4 and num_sub_indices = 2, then the
+    For example, if Num_Sub_Index_Values = 4 and Num_Sub_Indices = 2, then the
     set of "distinct" multi-indices is { (0, 0), (0, 1), (0, 2), (0, 3), (1, 1),
     (1, 2), (1, 3), (2, 2), (2, 3), (3, 3) }. This function will populate the
-    first 10 rows of multi_indices as follows:
+    first 10 rows of Multi_Indices as follows:
         [0, 0]
         [0, 1]
         [0, 2]
@@ -202,22 +202,22 @@ def Multi_Indices_Array(
         [2, 3]
         [3, 3]
 
-    Note: we assume that num_sub_indices and num_sub_index_values are POSITIVE
+    Note: we assume that Num_Sub_Indices and Num_Sub_Index_Values are POSITIVE
     integers.
 
     ----------------------------------------------------------------------------
     Arguments:
 
-    multi_indices: An N by num_sub_indices tensor, where N is "sufficiently
+    Multi_Indices: An N by Num_Sub_Indices tensor, where N is "sufficiently
     large" (see above). This array will hold all distinct multi-indices with
-    num_sub_indices sub-indices, each of which takes values in {0, 1,...
-    num_sub_index_values - 1}.
+    Num_Sub_Indices sub-indices, each of which takes values in {0, 1,...
+    Num_Sub_Index_Values - 1}.
 
-    num_sub_index_values: The number of distinct values that any sub-index can
-    take on. If num_sub_index_values = k, then each sub_index can take values
-    0, 1,... num_sub_index_values - 1.
+    Num_Sub_Index_Values: The number of distinct values that any sub-index can
+    take on. If Num_Sub_Index_Values = k, then each sub_index can take values
+    0, 1,... Num_Sub_Index_Values - 1.
 
-    num_sub_indices: The number of sub-indices in the multi-index.
+    Num_Sub_Indices: The number of sub-indices in the multi-index.
 
     sub_index: keeps track of which sub-index we're working on.
 
@@ -230,31 +230,31 @@ def Multi_Indices_Array(
     discard it. """
 
     # Assertions.
-    assert (num_sub_indices > 0), \
-        ("num_sub_indices must be a POSITIVE integer. Got %d." % num_sub_indices);
-    assert (num_sub_index_values > 0), \
-        ("num_sub_index_values must be a POSITIVE integer. Got %d." % num_sub_index_values);
+    assert (Num_Sub_Indices > 0), \
+        ("Num_Sub_Indices must be a POSITIVE integer. Got %d." % Num_Sub_Indices);
+    assert (Num_Sub_Index_Values > 0), \
+        ("Num_Sub_Index_Values must be a POSITIVE integer. Got %d." % Num_Sub_Index_Values);
 
     # Base case
-    if (sub_index == num_sub_indices - 1):
-        for j in range(sub_index_value, num_sub_index_values):
-            multi_indices[position + (j - sub_index_value), sub_index] = j;
+    if (sub_index == Num_Sub_Indices - 1):
+        for j in range(sub_index_value, Num_Sub_Index_Values):
+            Multi_Indices[position + (j - sub_index_value), sub_index] = j;
 
-        return position + (num_sub_index_values - sub_index_value);
+        return position + (Num_Sub_Index_Values - sub_index_value);
 
     # Recursive case.
-    else : # if (sub_index < num_sub_indices - 1):
-        for j in range(sub_index_value, num_sub_index_values):
+    else : # if (sub_index < Num_Sub_Indices - 1):
+        for j in range(sub_index_value, Num_Sub_Index_Values):
             new_position = Multi_Indices_Array(
-                            multi_indices        = multi_indices,
-                            num_sub_index_values = num_sub_index_values,
-                            num_sub_indices      = num_sub_indices,
+                            Multi_Indices        = Multi_Indices,
+                            Num_Sub_Index_Values = Num_Sub_Index_Values,
+                            Num_Sub_Indices      = Num_Sub_Indices,
                             sub_index            = sub_index + 1,
                             sub_index_value      = j,
                             position             = position);
 
             for k in range(0, (new_position - position)):
-                multi_indices[position + k, sub_index] = j;
+                Multi_Indices[position + k, sub_index] = j;
 
             position = new_position;
 
@@ -272,11 +272,15 @@ class Multi_Index_To_Col_Number():
 
         # First, allocate an array that's big enough to have a cell for every
         # possible multi-index. An array of size if M = Max_Sub_Indices, and
-        # N = Num_Sub_Index_Values, then an array of size N^M is big enough for
-        # this.
+        # N = Num_Sub_Index_Values, then an array of size N^M + N^(M - 1) +...
+        # N is big enough for this.
         M : int = Max_Sub_Indices;
         N : int = Num_Sub_Index_Values;
-        self.Index_Array = numpy.empty(N**M, dtype = numpy.int64);
+        Size = 0;
+        for k in range(1, M + 1):
+            Size += N**k;
+
+        self.Index_Array = numpy.empty(Size, dtype = numpy.int64);
 
         # Now, populate the relevant elements of the Index_Array.
         Counter : int = 0;
@@ -284,8 +288,8 @@ class Multi_Index_To_Col_Number():
             # First, determine the number of multi-indices with k sub-indices,
             # each of which can take on Num_Sub_Index_Values values.
             Num_Multi_Indices_k : int = Num_Multi_Indices(
-                                            num_sub_index_values = Num_Sub_Index_Values,
-                                            num_sub_indices      = k);
+                                            Num_Sub_Index_Values = Num_Sub_Index_Values,
+                                            Num_Sub_Indices      = k);
 
             # Use this number to allocate an array to hold all the multi-indices
             # with k sub-indices, each of which can take on Num_Sub_Index_Values
@@ -294,9 +298,9 @@ class Multi_Index_To_Col_Number():
 
             # Now use the Multi_Indices_Array function to populate that array.
             Multi_Indices_Array(
-                multi_indices        = Multi_Indices,
-                num_sub_index_values = Num_Sub_Index_Values,
-                num_sub_indices      = k);
+                Multi_Indices        = Multi_Indices,
+                Num_Sub_Index_Values = Num_Sub_Index_Values,
+                Num_Sub_Indices      = k);
 
             # Now, for each multi-index, determine its index in the Index_Array,
             # populate that element with the current counter value.
@@ -310,9 +314,9 @@ class Multi_Index_To_Col_Number():
 
 
 
-    def Multi_Index_To_Array_Index(Multi_Index : numpy.array) -> int:
+    def Multi_Index_To_Array_Index(self, Multi_Index : numpy.array) -> int:
         # First, get rid of any extra dimensions of size 1.
-        Multi_Index = Multi_Index.squeeze();
+        Multi_Index = Multi_Index.reshape(-1);
 
         # Now, determine how many multi-indicies are in this multi-index.
         Num_Sub_Indices : int = Multi_Index.size;
@@ -320,11 +324,17 @@ class Multi_Index_To_Col_Number():
         # Now, map that Multi-index to an array index according to the following
         # rule: If Max_Sub_Indices = M, Num_Sub_Index_Values = N, and
         # Num_Sub_Indices = K <= M, then,
-        #       Index = Multi_Index[0]*N^{K - 1} + Multi_Index[1]*N^{K - 2} +.... Multi_Index[K]
-        Index : int = 0;
+        #       Index = (Multi_Index[0] + 1)*N^{K - 1}
+        #             + (Multi_Index[1] + 1)*N^{K - 2}
+        #             ...
+        #             + (Multi_Index[K] + 1)
+        #             - 1
+        # Note that the -1 is here for zero-indexing.
+        Index = 0;
         M : int = self.Num_Sub_Index_Values;
-        for k in range(Num_Sub_Indices):
-            Index += Multi_Index[k]*(M**(Num_Sub_Indices - 1 - k));
+        for k in range(0, Num_Sub_Indices):
+            Index += (Multi_Index[k] + 1)*(M**(Num_Sub_Indices - 1 - k));
+        Index -= 1;
 
         return Index;
 
@@ -348,7 +358,7 @@ class Multi_Index_To_Col_Number():
         The column number associated with the Multi_Index. """
 
         # Remove any extra dimensions of size 1.
-        Multi_Index = Multi_Index.squeeze();
+        Multi_Index = Multi_Index.reshape(-1);
 
         # Make sure Multi_Index has an appropiate number of sub-indices
         assert(Multi_Index.size <= self.Max_Sub_Indices);
@@ -357,4 +367,4 @@ class Multi_Index_To_Col_Number():
         Index : int = self.Multi_Index_To_Array_Index(Multi_Index);
 
         # Return the value in the corresponding cell of the Index_Array.
-        return self.Index_Array(Index);
+        return self.Index_Array[Index];

@@ -17,7 +17,8 @@ import random;
 import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
-from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Array;
+from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Array, \
+                    Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number;
 
 
 
@@ -256,6 +257,58 @@ class xy_Derivatives_And_Index(unittest.TestCase):
 
                 self.assertEqual(Inverse[index, 0].item(), i);
                 self.assertEqual(Inverse[index, 1].item(), j);
+
+
+
+class Multi_Index_And_Col_Number(unittest.TestCase):
+    def test_Multi_Index_To_Col_Number(self):
+        # First, determine how many sub-indices we want to use, and how many
+        # index values we want per sub-index.
+        Max_Sub_Indices      : int = 5;
+        Num_Sub_Index_Values : int = 10;
+
+        MI_To_Col = Multi_Index_To_Col_Number(
+                        Max_Sub_Indices      = Max_Sub_Indices,
+                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+        # Now, generate the set of all possible multi-indices with at most
+        # Max_Sub_Indices sub-indices, each of which can take on
+        # Num_Sub_Index_Values values.
+        Multi_Indices = [];
+        for k in range(1, Max_Sub_Indices + 1):
+            # Determine the number of multi-indicies with k sub-indicies, each
+            # of which can take on Num_Sub_Index_Values values.
+            Num_k_Indicies : int = Num_Multi_Indices(
+                                        Num_Sub_Indices = k,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+            # Acquire a list of all possible multi-indicies with k sub-indices,
+            # each of wich can take on Num_Sub_Index_Values values.
+            Multi_Indices_k = numpy.empty((Num_k_Indicies, k), dtype = numpy.int64);
+            Multi_Indices_Array(
+                Multi_Indices        = Multi_Indices_k,
+                Num_Sub_Indices      = k,
+                Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+            # Append to the master list.
+            Multi_Indices.append(Multi_Indices_k);
+
+        # Now, see where these get mapped to:
+        Counter = 0;
+        for k in range(0, Max_Sub_Indices):
+            Num_k_Indices = Multi_Indices[k].shape[0];
+
+            for j in range(0, Num_k_Indices):
+                self.assertEqual(MI_To_Col(Multi_Indices[k][j, :]), Counter);
+
+                #Multi_Index = Multi_Indices[k][j, :];
+                #print("[ ", end = '');
+                #for i in range(0, k + 1):
+                #    print("%2d " % Multi_Index[i], end = '');
+                #print("] -> %d" % MI_To_Col(Multi_Index));
+
+                Counter += 1;
+
 
 
 if __name__ == "__main__":
