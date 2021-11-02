@@ -17,7 +17,7 @@ import random;
 import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
-from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Array, \
+from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives, \
                     Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number, \
                     Col_Number_To_Multi_Index;
 
@@ -208,56 +208,78 @@ class Test_Eval_Deriv(unittest.TestCase):
 
 class xy_Derivatives_And_Index(unittest.TestCase):
     def test_xy_Derivatives_to_Index(self):
-        # Test that the function gives the expected output for derivatives of
-        # order <= 3.
+        # Test that the function gives the expected output for derivatives less
+        # than a specified order, M. Note that we do not care about the order in
+        # which xy_Derivatives_To_Index maps elements of N^2 to N, so long as
+        # all elements of N^2 whose elements sum to <= M are mapped to {0, 1,
+        # ... (M + 1)(M + 2)/2 - 1}.
 
-        # Order 0
-        self.assertEqual(xy_Derivatives_To_Index(0, 0), 0);
+        M : int = random.randrange(1, 10);
+        Num_Index_Values : int = ((M + 1)*(M + 2))//2;
 
-        # Order 1
-        self.assertEqual(xy_Derivatives_To_Index(1, 0), 1);
-        self.assertEqual(xy_Derivatives_To_Index(0, 1), 2);
+        # To track how many pairs get mapped to each element in {0, 1,...
+        # (M + 1)(M + 2)/2 - 1}
+        Hit_Counter = numpy.zeros(Num_Index_Values, dtype = numpy.int64);
 
-        # Order 2
-        self.assertEqual(xy_Derivatives_To_Index(2, 0), 3);
-        self.assertEqual(xy_Derivatives_To_Index(1, 1), 4);
-        self.assertEqual(xy_Derivatives_To_Index(0, 2), 5);
+        for k in range(0, M + 1):
+            # There are k+1 spatial partial derivatives of order k. They are
+            #       D_{x}^k U, D_{x}^{k - 1} D_{y} U,... D_{y}^{k} U.
+            for j in range(0, k + 1):
+                # Number of x derivatives is k - j.
+                i     : int = k - j;
+                Index : int = xy_Derivatives_To_Index(i, j);
 
-        # Order 3
-        self.assertEqual(xy_Derivatives_To_Index(3, 0), 6);
-        self.assertEqual(xy_Derivatives_To_Index(2, 1), 7);
-        self.assertEqual(xy_Derivatives_To_Index(1, 2), 8);
-        self.assertEqual(xy_Derivatives_To_Index(0, 3), 9);
+                # check that the Index is in {0, 1,... (M + 1)(M + 2)/2 - 1}.
+                self.assertGreaterEqual(Index, 0);
+                self.assertLess(Index, Num_Index_Values);
+
+                Hit_Counter[Index] += 1;
+
+                #print("(%d, %d) -> %d" % (i, j, Index));
+
+        # now check that each value in {0, 1,... (M + 1)(M + 2)/2} got hit once.
+        for i in range(Num_Index_Values):
+            self.assertEqual(Hit_Counter[i], 1);
+
+
 
     def test_Index_To_xy_Derivatives_Array(self):
         # Generate a partial inverse, then test that this inverse actually
         # works.
 
         # First, pick a random index (with a reasonable value).
-        Max_Derivatives : int = random.randrange(0, 10);
+        Max_Derivatives : int = random.randrange(1, 10);
 
         # Now generate the inverse list.
-        Inverse = Index_to_xy_Derivatives_Array(Max_Derivatives);
+        Index_To_Deriv = Index_to_xy_Derivatives(Max_Derivatives);
 
         # Determine maximum index value that we inverted.
-        N = Inverse.shape[0];
+        N = Index_To_Deriv.Num_Index_Values;
 
-        # Check that Inverse composed with xy_Derivatives_To_Index is the identity.
+        # Check that Index_to_xy_Derivatives composed with
+        # xy_Derivatives_To_Index is the identity.
         for k in range(N):
-            i : int = Inverse[k, 0].item();
-            j : int = Inverse[k, 1].item();
-            self.assertEqual(k, xy_Derivatives_To_Index(i, j));
+            xy_Deriv = Index_To_Deriv(k).reshape(-1);
+            i : int = xy_Deriv[0];
+            j : int = xy_Deriv[1];
+            Index_Num : int = xy_Derivatives_To_Index(i, j);
+            self.assertEqual(k, Index_Num);
 
-        # check that xy_Derivatives_To_Index composed with Inverse is the identity.
+            #print("%d -> (%d, %d) -> %d" % (k, i, j, Index_Num));
+
+        # check that xy_Derivatives_To_Index composed with
+        # Index_to_xy_Derivatives is the identity.
         for k in range(0, Max_Derivatives):
             for j in range(0, k + 1):
                 i : int = k - j;        # Number of x derivatives.
 
-                index : int = xy_Derivatives_To_Index(i, j);
-                Inv_Index = Inverse[index, :];
+                Index : int = xy_Derivatives_To_Index(i, j);
+                xy_Der = Index_To_Deriv(Index).reshape(-1);
 
-                self.assertEqual(Inverse[index, 0].item(), i);
-                self.assertEqual(Inverse[index, 1].item(), j);
+                self.assertEqual(xy_Der[0].item(), i);
+                self.assertEqual(xy_Der[1].item(), j);
+
+                #print("(%d, %d) -> %d -> (%d, %d)" % (i, j, Index, xy_Der[0].item(), xy_Der[1].item()));
 
 
 

@@ -44,54 +44,64 @@ def xy_Derivatives_To_Index(
 
 
 
-def Index_to_xy_Derivatives_Array(Max_Derivatives : int):
-    """ This function effectively generates a partial inverse to
-    xy_Derivatives_To_Index. In particular, if Max_Derivatives = n, then it will
-    generate a two column numpy array whose kth row specifies the input to
-    xy_Derivatives_To_Index that maps to k.
+class Index_to_xy_Derivatives():
+    """ This class effectively acts as a partial inverse to
+    xy_Derivatives_To_Index. It does this using a look-up table whose kth
+    row specifies the element of N^2 that xy_Derivatives_To_Index maps to k.
 
-    Note: You should ONLY use this function if working with 2 spatial variables.
+    Note: You should ONLY use this class if working with 2 spatial variables. """
 
-    ----------------------------------------------------------------------------
-    Arguments:
+    def __init__(self, Max_Derivatives : int):
+        """ Max_Derivatives specifies the maximum derivative order for which you
+        want to invert xy_Derivatives_To_Index. This function will determine
+        where xy_Derivatives_To_Index sends each (i, j) in N^2 such that
+                i + j <= Max_Derivatives.
+        effectively, this value determines how much of xy_Derivatives_To_Index
+        we find an inverse for. In general, this value should be the maximum
+        number of derivatives of U you're taking (the setting value). We store
+        the results in a lookup table, which the call method accesses. """
 
-    Max_Derivatives: The maximum derivative order for which you want to invert
-    xy_Derivatives_To_Index. This function will determine where the function
-    sends all (i, j) in N^2 such that i + j <= Max_Derivatives. effectively,
-    this value determines how much of xy_Derivatives_To_Index we find an
-    inverse for. In general, this value should be the maximum number of
-    derivatives of U you're taking (the setting value).
+        # alias.
+        n : int = Max_Derivatives;
 
-    ----------------------------------------------------------------------------
-    Returns:
+        # The total number of spatial partial derivatives of order <= n is
+        # 1 + 2 + ... n + (n + 1) = (n + 1)(n + 2)/2 (think about it). This is the
+        # largest index value that we'll find an inverse for.
 
-    A two column numpy array whose ith row holds the element of N^2 which
-    xy_Derivatives_To_Index maps to i. In other words, it holds
-    xy_Derivatives_To_Index^{-1}(i). """
+        # Set up look up table.
+        self.Num_Index_Values : int = (n + 1)*(n + 2)//2;
+        self.Lookup_Table = numpy.empty((self.Num_Index_Values, 2));
 
-    # alias.
-    n : int = Max_Derivatives
+        # Cycle through derivative order.
+        i : int = 0;
+        for k in range(0, n + 1):
+            # Cycle through the number of y derivatives.
+            for j in range(0, k + 1):
+                self.Lookup_Table[i, 0] = k - j; # Number of x derivatives.
+                self.Lookup_Table[i, 1] = j;     # Number of y derivatives.
 
-    # The total number of spatial partial derivatives of order <= n is
-    # 1 + 2 + ... n + (n + 1) = (n + 1)(n + 2)/2 (think about it). This is the
-    # largest index value that we'll find an inverse for.
+                # Increment counter.
+                i += 1;
 
-    # Set up return variable.
-    Max_Index_Value : int = (n + 1)*(n + 2)//2;
-    Inverse = numpy.empty((Max_Index_Value, 2));
+    def __call__(self, Index : int) -> numpy.array:
+        """ This function returns the element of N^2 which
+        xy_Derivatives_To_Index maps to Index.
 
-    # Cycle through derivative order.
-    i : int = 0;
-    for k in range(0, n + 1):
-        # Cycle through number of y derivatives.
-        for j in range(0, k + 1):
-            Inverse[i, 0] = k - j;      # Number of x derivatives.
-            Inverse[i, 1] = j;          # Number of y derivatives.
+        ------------------------------------------------------------------------
+        Arguments:
 
-            # Increment counter.
-            i += 1;
+        Index: the index value. This function determines which element of N^2
+        xy_Derivatives_To_Index maps to Index.
 
-    return Inverse;
+        ------------------------------------------------------------------------
+        Returns:
+
+        A 1 by 2 numpy array. The first element specifies the number of x
+        derivatives. the second specifies the number of y derivatives. Together,
+        they give xy_Derivatives_To_Index^{-1}(Index). """
+
+        assert(Index < self.Num_Index_Values);
+        return self.Lookup_Table[Index, :];
 
 
 
