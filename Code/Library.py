@@ -96,8 +96,8 @@ def Index_to_xy_Derivatives_Array(Max_Derivatives : int):
 
 
 def Num_Multi_Indices(
-        Num_Sub_Index_Values : int,
         Num_Sub_Indices      : int,
+        Num_Sub_Index_Values : int,
         sub_index            : int = 0,
         sub_index_value      : int = 0,
         counter              : int = 0) -> int:
@@ -155,8 +155,8 @@ def Num_Multi_Indices(
     else : # if (sub_index < Num_Sub_Indices - 1):
         for j in range(sub_index_value, Num_Sub_Index_Values):
             counter = Num_Multi_Indices(
-                        Num_Sub_Index_Values = Num_Sub_Index_Values,
                         Num_Sub_Indices      = Num_Sub_Indices,
+                        Num_Sub_Index_Values = Num_Sub_Index_Values,
                         sub_index            = sub_index + 1,
                         sub_index_value      = j,
                         counter              = counter);
@@ -167,8 +167,8 @@ def Num_Multi_Indices(
 
 def Multi_Indices_Array(
         Multi_Indices        : numpy.array,
-        Num_Sub_Index_Values : int,
         Num_Sub_Indices      : int,
+        Num_Sub_Index_Values : int,
         sub_index            : int = 0,
         sub_index_value      : int = 0,
         position             : int = 0) -> int:
@@ -247,8 +247,8 @@ def Multi_Indices_Array(
         for j in range(sub_index_value, Num_Sub_Index_Values):
             new_position = Multi_Indices_Array(
                             Multi_Indices        = Multi_Indices,
-                            Num_Sub_Index_Values = Num_Sub_Index_Values,
                             Num_Sub_Indices      = Num_Sub_Indices,
+                            Num_Sub_Index_Values = Num_Sub_Index_Values,
                             sub_index            = sub_index + 1,
                             sub_index_value      = j,
                             position             = position);
@@ -264,8 +264,8 @@ def Multi_Indices_Array(
 
 class Multi_Index_To_Col_Number():
     def __init__(   self,
-                    Num_Sub_Index_Values : int,
-                    Max_Sub_Indices      : int):
+                    Max_Sub_Indices      : int,
+                    Num_Sub_Index_Values : int):
 
         self.Max_Sub_Indices      = Max_Sub_Indices;
         self.Num_Sub_Index_Values = Num_Sub_Index_Values;
@@ -288,24 +288,24 @@ class Multi_Index_To_Col_Number():
             # First, determine the number of multi-indices with k sub-indices,
             # each of which can take on Num_Sub_Index_Values values.
             Num_Multi_Indices_k : int = Num_Multi_Indices(
-                                            Num_Sub_Index_Values = Num_Sub_Index_Values,
-                                            Num_Sub_Indices      = k);
+                                            Num_Sub_Indices      = k,
+                                            Num_Sub_Index_Values = Num_Sub_Index_Values);
 
             # Use this number to allocate an array to hold all the multi-indices
             # with k sub-indices, each of which can take on Num_Sub_Index_Values
             # values.
-            Multi_Indices = numpy.empty((Num_Multi_Indices_k, k), dtype = numpy.int64);
+            k_Indices = numpy.empty((Num_Multi_Indices_k, k), dtype = numpy.int64);
 
             # Now use the Multi_Indices_Array function to populate that array.
             Multi_Indices_Array(
-                Multi_Indices        = Multi_Indices,
-                Num_Sub_Index_Values = Num_Sub_Index_Values,
-                Num_Sub_Indices      = k);
+                Multi_Indices        = k_Indices,
+                Num_Sub_Indices      = k,
+                Num_Sub_Index_Values = Num_Sub_Index_Values);
 
             # Now, for each multi-index, determine its index in the Index_Array,
             # populate that element with the current counter value.
             for j in range(0, Num_Multi_Indices_k):
-                Multi_Index = Multi_Indices[j, :];
+                Multi_Index = k_Indices[j, :];
                 Index = self.Multi_Index_To_Array_Index(Multi_Index);
                 self.Index_Array[Index] = Counter;
 
@@ -368,3 +368,68 @@ class Multi_Index_To_Col_Number():
 
         # Return the value in the corresponding cell of the Index_Array.
         return self.Index_Array[Index];
+
+
+
+class Col_Number_To_Multi_Index():
+    def __init__(   self,
+                    Max_Sub_Indices      : int,
+                    Num_Sub_Index_Values : int):
+
+        # First, allocate a list of arrays holding all possible multi-indices.
+        # Keep track of how many total indices there are.
+        self.Multi_Indices = [];
+        self.Total_Indices : int = 0;
+        for k in range(1, Max_Sub_Indices + 1):
+            # Determine how many multi-indices there are with k sub-indices,
+            # each of which can take on Num_Sub_Index_Values values.
+            Num_k_Indices : int = Num_Multi_Indices(
+                                        Num_Sub_Indices      = k,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+            self.Total_Indices += Num_k_Indices;
+
+            k_Indices = numpy.empty((Num_k_Indices, k), dtype = numpy.int64);
+            Multi_Indices_Array(
+                    Multi_Indices        = k_Indices,
+                    Num_Sub_Indices      = k,
+                    Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+            self.Multi_Indices.append(k_Indices);
+
+        # The idea is as follows: We'll make a look-up table whose ith row
+        # has two elements. The first tells you how many sub-indices are in
+        # the multi-index associated with the ith column. The second will tell
+        # you which element of self.Multi_Indicies[k] holds the actual
+        # multi-index. First, we'll allocate the lookup table:
+        self.Lookup_Table = numpy.empty((self.Total_Indices, 2), dtype = numpy.int64);
+
+        # Now, make a Multi_Index_To_Col_Number map. We'll use this to populate
+        # the Lookup table. This way, our function will literally be an
+        # inverse of Multi_Index_To_Col_Number. Even if the way that we map the
+        # multi-indicies to columns changes, this function will still work.
+        # (as long as Multi_Index_To_Col_Number maps N possible multi-indicies
+        # to 0, 1,... N-1)
+        Index_To_Col = Multi_Index_To_Col_Number(
+                            Max_Sub_Indices      = Max_Sub_Indices,
+                            Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+        # Populate the lookup table!
+        for k in range(0, Max_Sub_Indices):
+            Num_kp1_Indices : int = self.Multi_Indices[k].shape[0];
+            for j in range(Num_kp1_Indices):
+                Multi_Index   = self.Multi_Indices[k][j, :];
+                Col_Num : int = Index_To_Col(Multi_Index);
+
+                self.Lookup_Table[Col_Num, 0] = k;
+                self.Lookup_Table[Col_Num, 1] = j;
+
+    def __call__(self, Col_Num : int):
+        # First, get the number of sub-indices in the multi-index corresponding
+        # to this column number, as well as the cell of the corresponding
+        # array in self.Multi_Indices holds the corresponding multi-index.
+        k : int = self.Lookup_Table[Col_Num, 0];
+        j : int = self.Lookup_Table[Col_Num, 1];
+
+        assert(Col_Num < self.Total_Indices);
+
+        return self.Multi_Indices[k][j, :];

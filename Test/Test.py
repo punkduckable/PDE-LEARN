@@ -18,7 +18,8 @@ import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
 from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Array, \
-                    Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number;
+                    Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number, \
+                    Col_Number_To_Multi_Index;
 
 
 
@@ -264,8 +265,8 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
     def test_Multi_Index_To_Col_Number(self):
         # First, determine how many sub-indices we want to use, and how many
         # index values we want per sub-index.
-        Max_Sub_Indices      : int = 5;
-        Num_Sub_Index_Values : int = 10;
+        Max_Sub_Indices      : int = random.randrange(1, 6);
+        Num_Sub_Index_Values : int = random.randrange(2, 15);
 
         MI_To_Col = Multi_Index_To_Col_Number(
                         Max_Sub_Indices      = Max_Sub_Indices,
@@ -275,16 +276,18 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
         # Max_Sub_Indices sub-indices, each of which can take on
         # Num_Sub_Index_Values values.
         Multi_Indices = [];
+        Total_Indices : int = 0;
         for k in range(1, Max_Sub_Indices + 1):
             # Determine the number of multi-indicies with k sub-indicies, each
             # of which can take on Num_Sub_Index_Values values.
-            Num_k_Indicies : int = Num_Multi_Indices(
-                                        Num_Sub_Indices = k,
+            Num_k_Indices : int = Num_Multi_Indices(
+                                        Num_Sub_Indices      = k,
                                         Num_Sub_Index_Values = Num_Sub_Index_Values);
+            Total_Indices += Num_k_Indices;
 
             # Acquire a list of all possible multi-indicies with k sub-indices,
             # each of wich can take on Num_Sub_Index_Values values.
-            Multi_Indices_k = numpy.empty((Num_k_Indicies, k), dtype = numpy.int64);
+            Multi_Indices_k = numpy.empty((Num_k_Indices, k), dtype = numpy.int64);
             Multi_Indices_Array(
                 Multi_Indices        = Multi_Indices_k,
                 Num_Sub_Indices      = k,
@@ -293,13 +296,17 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
             # Append to the master list.
             Multi_Indices.append(Multi_Indices_k);
 
-        # Now, see where these get mapped to:
+        # Now, see where each Multi_Index gets mapped to.
         Counter = 0;
+        Hit_Counter = numpy.zeros(Total_Indices, dtype = numpy.int64);
         for k in range(0, Max_Sub_Indices):
             Num_k_Indices = Multi_Indices[k].shape[0];
 
             for j in range(0, Num_k_Indices):
-                self.assertEqual(MI_To_Col(Multi_Indices[k][j, :]), Counter);
+                # Each multi-index should be mapped to a value in {0, 1,... Total_Indices - 1}.
+                Col_Num : int = MI_To_Col(Multi_Indices[k][j, :]);
+                self.assertLess(Col_Num, Total_Indices);
+                Hit_Counter[Col_Num] += 1;
 
                 #Multi_Index = Multi_Indices[k][j, :];
                 #print("[ ", end = '');
@@ -307,7 +314,60 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
                 #    print("%2d " % Multi_Index[i], end = '');
                 #print("] -> %d" % MI_To_Col(Multi_Index));
 
-                Counter += 1;
+        # Check that each element of the range is hit exactly once.
+        for i in range(Total_Indices):
+            self.assertEqual(Hit_Counter[i], 1);
+
+
+
+    def test_Col_Num_To_Multi_Index(self):
+        # This function essentially checks that Col_Number_To_Multi_Index is
+        # the inverse of Multi_Index_To_Col_Number. To test this, we check
+        # that the composition of the two functions, in either order, gives
+        # the identity map.
+
+        Max_Sub_Indices : int      = random.randrange(1, 6);
+        Num_Sub_Index_Values : int = random.randrange(2, 10);
+
+        # First, we should generate a list of all multi-indices. We'll need this
+        # for testing.
+        Multi_Indices = [];
+        Total_Indices = 0;
+        for k in range(1, Max_Sub_Indices + 1):
+            Num_k_Indices : int = Num_Multi_Indices(
+                                    Num_Sub_Indices      = k,
+                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
+            Total_Indices += Num_k_Indices;
+
+            k_Indices = numpy.empty((Num_k_Indices, k), dtype = numpy.int64);
+            Multi_Indices_Array(
+                Multi_Indices        = k_Indices,
+                Num_Sub_Indices      = k,
+                Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+            Multi_Indices.append(k_Indices);
+
+        # Initialize the Col_Num to Multi_Index map.
+        Col_To_MI = Col_Number_To_Multi_Index(
+                        Max_Sub_Indices      = Max_Sub_Indices,
+                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+        MI_To_Col = Multi_Index_To_Col_Number(
+                        Max_Sub_Indices      = Max_Sub_Indices,
+                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+        # Test that Col_Number_To_Multi_Index maps column numbers to the correct
+        # Indicies.
+        for i in range(0, Total_Indices):
+            Multi_Index_i = Col_To_MI(i);
+            Col_Num_i     = MI_To_Col(Multi_Index_i);
+            self.assertEqual(Col_Num_i, i);
+
+            #print("%3d -> [" % i, end = '');
+            #Num_Sub_Indices = Multi_Index_i.size;
+            #for j in range(Num_Sub_Indices):
+            #    print(" %2d " % Multi_Index_i[j], end = '');
+            #print("] -> %3d" % Col_Num_i);
 
 
 
