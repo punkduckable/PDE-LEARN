@@ -273,9 +273,40 @@ def Multi_Indices_Array(
 
 
 class Multi_Index_To_Col_Number():
+    """ This class creates a functor that maps multi-indicies to their
+    corresponding column number (in the library). In particular, given a maximum
+    number of sub-indicies, as well as the number of values that each sub-index
+    can take on, this class generates an injective function which maps those
+    multi-indices to {0, 1,... K-1}, where K is the number of multi-indicies
+    that meet the criteria. """
     def __init__(   self,
                     Max_Sub_Indices      : int,
                     Num_Sub_Index_Values : int):
+
+        """" For brevity, met M = Max_Sub_Indices and N = Num_Sub_Index_Values.
+        This function essentially generates a pair of look-up tables which,
+        when taken together, specify which column number is associated with each
+        multi-index that has at most M sub-indicies, each of which takes on
+        N possible values.
+
+        The tricky part is that we need to associate a unique number with each
+        Multi-Index. Ideally, we'd like this to just be the column number.
+        Unfortuneatly, there's no good way to do that directly. So, I've taken
+        a different approach: Map the multi-index [i(1), i(2),... i(m)] to
+            (i(1) + 1)*(N^(m - 1)) + (i(2) + 1)*(N^(m - 2)) + ... + (i(m) + 1) - 1
+        (the -1 at the end is for zero indexing). This mapping is injective,
+        but not surjective. In fact, it doesn't map to most values in N. We
+        create an array that is big enough to hold the range of this map when
+        m <= M and each i(k) takes values in {0, 1, ..., N - 1}. We then assign
+        a column  number to each multi-index, [i(1), ... i(m)], and then store
+        that number in ith cell of the array, where i is the image of [i(1),...
+        i(m)] under the above map.
+
+        The underlying array can be gigantic, and most of it goes unused. We
+        could use a sparse representation, but we need a matrix that has O(1)
+        access time. Since the array does not have any clear structure (to me,
+        at least), I'm not sure how to do that. So, this functor is not
+        terribly space efficient, but it works. """
 
         self.Max_Sub_Indices      = Max_Sub_Indices;
         self.Num_Sub_Index_Values = Num_Sub_Index_Values;
@@ -382,6 +413,25 @@ class Multi_Index_To_Col_Number():
 
 
 class Col_Number_To_Multi_Index():
+    """ This class creates functors which map column numbers back to their
+    corresponding multi-indicies. Specicially, its object acts as an inverse to
+    the functors created by Multi_Index_To_Col_Number. It accomplishes this
+    using a pair of look-up tables.
+
+    Suppose that f is an instance of Multi_Index_To_Col_Number that was
+    initialized with Max_Sub_Indices = M, and Num_Sub_Index_Values = N. Let
+    g be an instance of Col_Number_To_Multi_Index that was also initialized with
+    Max_Sub_Indices = M and Num_Sub_Index_Values = N. Let's focus on g's
+    look up table: The kth row of this table specifies two valies, i and j.
+    i specifies the number of sub-indices in the multi-index that f maps
+    to k. g also contains an array which holds all multi-indicies that have
+    i sub-indices. j tells us which element of that array holds the multi-index
+    that f mapped to k. Thus, once we have i and j, we can just return the
+    jth element of the array that holds the multi-indicies with i sub-indices.
+
+    In this way, our look-up table basically tells us which other look-up table
+    to go to, as well as which element of that table holds the answer we want. """
+
     def __init__(   self,
                     Max_Sub_Indices      : int,
                     Num_Sub_Index_Values : int):
@@ -434,6 +484,25 @@ class Col_Number_To_Multi_Index():
                 self.Lookup_Table[Col_Num, 1] = j;
 
     def __call__(self, Col_Num : int):
+        """ This function returns the multi-index corresponding to the specified
+        Column nuber.
+
+        ------------------------------------------------------------------------
+        Arguments:
+
+        Col_Number: The column number whose corresponding multi-index we want.
+        Specifcially, suppose that Max_Sub_Indices = M and
+        Num_Sub_Index_Values = N. Let f be an instance of
+        Multi_Index_To_Col_Number that was initialized using N and M. Then,
+        this function with Col_Num = k gives the multi-index that f maps to k.
+
+        ------------------------------------------------------------------------
+        Returns:
+
+        The multi-index (as a numpy array row) corresponding to the Col_Num. See
+        description under Col_Number in the Arguments section of this doc
+        string. """
+
         # First, get the number of sub-indices in the multi-index corresponding
         # to this column number, as well as the cell of the corresponding
         # array in self.Multi_Indices holds the corresponding multi-index.
