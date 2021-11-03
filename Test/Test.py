@@ -17,9 +17,9 @@ import random;
 import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
-from Library import xy_Derivatives_To_Index, Index_to_xy_Derivatives, \
-                    Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number, \
-                    Col_Number_To_Multi_Index;
+from Mappings import xy_Derivatives_To_Index, Index_to_xy_Derivatives, \
+                     Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number, \
+                     Col_Number_To_Multi_Index;
 
 
 
