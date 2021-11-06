@@ -2,10 +2,10 @@ import numpy;
 import torch;
 
 from Network import Neural_Network;
+from Mappings import Index_to_xy_Derivatives_Class, Index_To_x_Derivatives, Col_Number_To_Multi_Index_Class;
+from Evaluate_Derivatives import Evaluate_Derivatives;
 
-from Mappings import xy_Derivatives_To_Index, Index_to_xy_Derivatives, \
-                     Num_Multi_Indices, Multi_Indices_Array, \
-                     Multi_Index_To_Col_Number, Col_Number_To_Multi_Index;
+
 
 def Data_Loss(
         U : Neural_Network,
@@ -45,3 +45,144 @@ def Data_Loss(
 
     # Return the mean square error.
     return Square_Error.mean();
+
+
+
+def Coll_Loss(
+        U           : Neural_Network,
+        Xi          : torch.Tensor,
+        Coll_Points : torch.Tensor,
+        Highest_Order_Derivatives : int,
+        Index_To_Derivatives,
+        Col_Number_To_Multi_Index,
+        Device      : torch.device = torch.device('cpu')) -> torch.Tensor:
+    """ Describe me!
+
+    Xi should be a 1D Tensor. """
+
+    # First, determine the number of spatial dimensions. Sice U is a function
+    # of t and x, or t and x, y, this is just one minus the input dimension of
+    # U.
+    Num_Spatial_Dimensions : int = U.Input_Dim - 1;
+
+    # This code behaves differently for 1 and 2 spatial variables.
+    if(Num_Spatial_Dimensions == 1):
+        # First, acquire the spatial and time derivatives of U.
+        (Dt_U, Dx_U) = Evaluate_Derivatives(
+                            U      = U,
+                            Highest_Order_Derivatives = Highest_Order_Derivatives,
+                            Coords = Coll_Points,
+                            Device = Device);
+
+        # Construct our approximation to Dt_U. To do this, we cycle through
+        # the columns of the library. At each column, we construct the term
+        # and then multiply it by the corresponding component of Xi. We then add
+        # the result to a running total.
+        Library_Xi_Product = torch.zeros_like(Dt_U);
+
+        Num_Cols = torch.numel(Xi);
+        for i in range(Num_Cols):
+            # First, obtain the Multi_Index associated with this column number.
+            Multi_Index     = Col_Number_To_Multi_Index(i);
+            Num_Sub_Indices = Multi_Index.size;
+
+            # Initialize an array for ith library term. Since we construct this
+            # via multiplication, this needs to initialized to a tensor of 1's.
+            ith_Lib_Term = torch.ones_like(Dt_U);
+
+            # Now, cycle through the indices in this multi-index.
+            for j in range(Num_Sub_Indices):
+                # First, determine how many derivatives are in the jth term.
+                Num_Deriv = Index_To_Derivatives(Multi_Index[j]);
+
+                # Now multiply the ith library term by the corresponding
+                # derivative of U.
+                ith_Lib_Term.mul_(Dx_U[Num_Deriv].view(-1));
+
+            # Multiply the ith_Lib_Term by the ith component of Xi and add the
+            # result to the Library_Xi product.
+            Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+
+        # Now, compute the pointwise square error between Dt_U and the
+        # Library_Xi_Product.
+        Square_Error = ( Dt_U - Library_Xi_Product )**2;
+
+        # Return the mean square error.
+        return Square_Error.mean();
+
+    else: # Num Spatial dimensions == 2.
+        # First, acquire the spatial and time derivatives of U.
+        (Dt_U, Dxy_U) = Evaluate_Derivatives(
+                            U      = U,
+                            Highest_Order_Derivatives = Highest_Order_Derivatives,
+                            Coords = Coll_Points,
+                            Device = Device);
+
+        # Construct our approximation to Dt_U. To do this, we cycle through
+        # the columns of the library. At each column, we construct the term
+        # and then multiply it by the corresponding component of Xi. We then add
+        # the result to a running total.
+        Library_Xi_Product = torch.zeros_like(Dt_U);
+
+        Num_Cols = torch.numel(Xi);
+        for i in range(Num_Cols):
+            # First, obtain the Multi_Index associated with this column number.
+            Multi_Index     = Col_Number_To_Multi_Index(i);
+            Num_Sub_Indices = Multi_Index.size;
+
+            # Initialize an array for ith library term. Since we construct this
+            # via multiplication, this needs to initialized to a tensor of 1's.
+            ith_Lib_Term = torch.ones_like(Dt_U);
+
+            # Now, cycle through the indices in this multi-index.
+            for j in range(Num_Sub_Indices):
+                # First, determine how many derivatives are in the jth term.
+                Num_xy_Derivs = Index_To_Derivatives(Multi_Index[j]);
+                Num_x_Deriv : int = Num_xy_Derivs[0];
+                Num_y_Deriv : int = Num_xy_Derivs[1];
+                Num_Deriv = Num_x_Deriv + Num_y_Deriv;
+
+                # Now multiply the ith library term by the corresponding
+                # derivative of U.
+                ith_Lib_Term.mul_(Dx_U[Num_Deriv][:, Num_y_Deriv]);
+
+            # Multiply the ith_Lib_Term by the ith component of Xi and add the
+            # result to the Library_Xi product.
+            Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+
+        # Now, compute the pointwise square error between Dt_U and the
+        # Library_Xi_Product.
+        Square_Error = ( Dt_U - Library_Xi_Product )**2;
+
+        # Return the mean square error.
+        return Square_Error.mean();
+
+
+
+def Lp_Loss(Xi : torch.Tensor, p : float):
+    """ This function returns the "p-norm" (it's not a norm for p < 1) of Xi.
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
+
+    p: The "p" in ||Xi||_p, which is what thsi function returns.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    ||Xi||_p = (|Xi_1|^p + ... |Xi_N|^p)^(1/p)
+    where N is the number of components of Xi. """
+
+    # p must be positive for the following to work.
+    assert(p > 0):
+
+    # First, take the point-wise absolute value of Xi.
+    Abs_Xi = torch.abs(Xi);
+
+    # Now raise each component of Abs_Xi to the power of p.
+    Abs_Xi_p = torch.pow(Abs_Xi, p);
+
+    # Now add up the components and raise to the 1/p power.
+    return torch.pow(torch.sum(Abs_Xi_p), 1/p);

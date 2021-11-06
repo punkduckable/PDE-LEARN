@@ -44,6 +44,11 @@ def xy_Derivatives_To_Index(
 
 
 
+def Index_To_x_Derivatives(Index : int) -> int:
+    return Index;
+
+
+
 class Index_to_xy_Derivatives_Class():
     """ This class effectively acts as a partial inverse to
     xy_Derivatives_To_Index. It does this using a look-up table whose kth
@@ -96,12 +101,12 @@ class Index_to_xy_Derivatives_Class():
         ------------------------------------------------------------------------
         Returns:
 
-        A 1 by 2 numpy array. The first element specifies the number of x
+        A 2 element numpy array. The first element specifies the number of x
         derivatives. the second specifies the number of y derivatives. Together,
         they give xy_Derivatives_To_Index^{-1}(Index). """
 
         assert(Index < self.Num_Index_Values);
-        return self.Lookup_Table[Index, :];
+        return self.Lookup_Table[Index, :].view(-1);
 
 
 
@@ -499,8 +504,9 @@ class Col_Number_To_Multi_Index_Class():
         ------------------------------------------------------------------------
         Returns:
 
-        The multi-index (as a numpy array row) corresponding to the Col_Num. See
-        description under Col_Number in the Arguments section of this doc
+        The multi-index (as a numpy array) corresponding to the Col_Num. If
+        the multi-index has n sub-indices, then this will be an n element array.
+        See description under Col_Number in the Arguments section of this doc
         string. """
 
         # First, get the number of sub-indices in the multi-index corresponding
@@ -511,4 +517,4 @@ class Col_Number_To_Multi_Index_Class():
 
         assert(Col_Num < self.Total_Indices);
 
-        return self.Multi_Indices[k][j, :];
+        return self.Multi_Indices[k][j, :].view(-1);

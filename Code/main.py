@@ -19,18 +19,13 @@ def main():
     # Set up Index_to_xy_Derivatives, Multi_Index_To_Col_Number, and
     # Col_Number_To_Multi_Index maps.
     Index_To_xy_Derivatives = Index_To_xy_Derivatives_Class(
-                                Max_Derivatives = Settings.Highest_Order_Derivatives);
-
-    # Use ths mapping to determine the number of sub-index values.
-    Num_Sub_Index_Values : int = Index_To_xy_Derivatives.Num_Index_Values;
-
-    # Use this to set up the subsequent mappings.
+                                    Max_Derivatives      = Settings.Highest_Order_Derivatives);
     Multi_Index_To_Col_Number = Multi_Index_To_Col_Number_Class(
-                                    Max_Sub_Indices = Settings.Maximum_Term_Degree,
-                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
+                                    Max_Sub_Indices      = Settings.Maximum_Term_Degree,
+                                    Num_Sub_Index_Values = Index_To_xy_Derivatives.Num_Index_Values);
     Multi_Index_To_Col_Number = Col_Number_To_Multi_Index_Class(
-                                    Max_Sub_Indices = Settings.Maximum_Term_Degree,
-                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
+                                    Max_Sub_Indices      = Settings.Maximum_Term_Degree,
+                                    Num_Sub_Index_Values = Index_To_xy_Derivatives.Num_Index_Values);
 
 
 

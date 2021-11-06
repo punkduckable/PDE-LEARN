@@ -33,7 +33,7 @@ def Evaluate_Derivatives(
     Returns:
 
     This returns a two-element Tuple! If Coords has M rows, then the first
-    return argument is an M by 1 Tensor whose i, 1 element holds the value of
+    return argument is an M element Tensor whose ith element holds the value of
     D_{t} U at the ith coordinate.
 
     The second is a List of tensors, whose kth element holds a tensor that
@@ -99,7 +99,7 @@ def Evaluate_Derivatives(
                     create_graph    = True)[0];
 
         # extract D_{t} U and D_{x} U at each coordinate.
-        Dt_U = Grad_U[:, 0].view(-1, 1);
+        Dt_U = Grad_U[:, 0].view(-1);
         Dxn_U.append(Grad_U[:, 1].view(-1, 1));
 
         # Compute higher order derivatives
@@ -151,7 +151,7 @@ def Evaluate_Derivatives(
                     create_graph    = True)[0];
 
         # extract D_{t} U,  D_{x} U, and D_{y} U at each coordinate.
-        Dt_U         = Grad_U[:, 0].view(-1, 1);
+        Dt_U         = Grad_U[:, 0].view(-1);
         Dxy1_U[:, 0] = Grad_U[:, 1];
         Dxy1_U[:, 1] = Grad_U[:, 2];
 
