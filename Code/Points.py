@@ -8,6 +8,29 @@ def Generate_Points(
         Bounds     : numpy.array,
         Num_Points : int,
         Device     : torch.device = torch.device('cpu')) -> torch.Tensor:
+    """ This function generates a two-dimensional tensor, each row of which
+    holds a randomly generated coordinate that lies in the rectangle defined by
+    Bounds.
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    Bounds: A two-column tensor. Whose ith row contains the lower and upper
+    bounds of the ith sub-rectangle of the rectangle.
+
+    Num_Points: The number of points we want to generate.
+
+    Device: The device you want the Point tensor to be stored on.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    A Num_Points row tensor, each row of which contains a randomly generated
+    coordinate in the rectangle specified by Bounds. Suppose that
+            Bounds = [[a_1, b_1], ... , [a_n, b_n]]
+    Then the ith row of the returned tensor contains a coordinate that lies
+    within [a_1, b_1]x...x[a_n, b_n]. """
+
 
     # First, determine the number of dimensions. This is just the number of rows
     # in Bounds.
@@ -18,7 +41,9 @@ def Generate_Points(
         assert(Bounds[j, 0] <= Bounds[j, 1]);
 
     # Make a tensor to hold all the points.
-    Points = torch.empty((Num_Points, Num_Dim), dtype = numpy.int64);
+    Points = torch.empty((Num_Points, Num_Dim),
+                         dtype = numpy.int64,
+                         device = Device);
 
     # Populate the coordinates in Points, one coordinate at a time.
     for j in range(Num_Dim):

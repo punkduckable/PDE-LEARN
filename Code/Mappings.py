@@ -44,7 +44,7 @@ def xy_Derivatives_To_Index(
 
 
 
-class Index_to_xy_Derivatives():
+class Index_to_xy_Derivatives_Class():
     """ This class effectively acts as a partial inverse to
     xy_Derivatives_To_Index. It does this using a look-up table whose kth
     row specifies the element of N^2 that xy_Derivatives_To_Index maps to k.
@@ -272,7 +272,7 @@ def Multi_Indices_Array(
 
 
 
-class Multi_Index_To_Col_Number():
+class Multi_Index_To_Col_Number_Class():
     """ This class creates a functor that maps multi-indicies to their
     corresponding column number (in the library). In particular, given a maximum
     number of sub-indicies, as well as the number of values that each sub-index
@@ -412,7 +412,7 @@ class Multi_Index_To_Col_Number():
 
 
 
-class Col_Number_To_Multi_Index():
+class Col_Number_To_Multi_Index_Class():
     """ This class creates functors which map column numbers back to their
     corresponding multi-indicies. Specicially, its object acts as an inverse to
     the functors created by Multi_Index_To_Col_Number. It accomplishes this
@@ -469,16 +469,16 @@ class Col_Number_To_Multi_Index():
         # multi-indicies to columns changes, this function will still work.
         # (as long as Multi_Index_To_Col_Number maps N possible multi-indicies
         # to 0, 1,... N-1)
-        Index_To_Col = Multi_Index_To_Col_Number(
-                            Max_Sub_Indices      = Max_Sub_Indices,
-                            Num_Sub_Index_Values = Num_Sub_Index_Values);
+        Multi_Index_To_Col_Number = Multi_Index_To_Col_Number_Class(
+                                        Max_Sub_Indices      = Max_Sub_Indices,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
 
         # Populate the lookup table!
         for k in range(0, Max_Sub_Indices):
             Num_kp1_Indices : int = self.Multi_Indices[k].shape[0];
             for j in range(Num_kp1_Indices):
                 Multi_Index   = self.Multi_Indices[k][j, :];
-                Col_Num : int = Index_To_Col(Multi_Index);
+                Col_Num : int = Multi_Index_To_Col_Number(Multi_Index);
 
                 self.Lookup_Table[Col_Num, 0] = k;
                 self.Lookup_Table[Col_Num, 1] = j;

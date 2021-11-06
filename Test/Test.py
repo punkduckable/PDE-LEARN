@@ -17,9 +17,9 @@ import random;
 import math;
 
 from Evaluate_Derivatives import Evaluate_Derivatives;
-from Mappings import xy_Derivatives_To_Index, Index_to_xy_Derivatives, \
-                     Num_Multi_Indices, Multi_Indices_Array, Multi_Index_To_Col_Number, \
-                     Col_Number_To_Multi_Index;
+from Mappings import xy_Derivatives_To_Index, Index_to_xy_Derivatives_Class, \
+                     Num_Multi_Indices, Multi_Indices_Array, \
+                     Multi_Index_To_Col_Number_Class, Col_Number_To_Multi_Index_Class;
 
 
 
@@ -251,15 +251,15 @@ class xy_Derivatives_And_Index(unittest.TestCase):
         Max_Derivatives : int = random.randrange(1, 10);
 
         # Now generate the inverse list.
-        Index_To_Deriv = Index_to_xy_Derivatives(Max_Derivatives);
+        Index_to_xy_Derivatives = Index_to_xy_Derivatives_Class(Max_Derivatives);
 
         # Determine maximum index value that we inverted.
-        N = Index_To_Deriv.Num_Index_Values;
+        N = Index_to_xy_Derivatives.Num_Index_Values;
 
         # Check that Index_to_xy_Derivatives composed with
         # xy_Derivatives_To_Index is the identity.
         for k in range(N):
-            xy_Deriv = Index_To_Deriv(k).reshape(-1);
+            xy_Deriv = Index_to_xy_Derivatives(k).reshape(-1);
             i : int = xy_Deriv[0];
             j : int = xy_Deriv[1];
             Index_Num : int = xy_Derivatives_To_Index(i, j);
@@ -274,7 +274,7 @@ class xy_Derivatives_And_Index(unittest.TestCase):
                 i : int = k - j;        # Number of x derivatives.
 
                 Index : int = xy_Derivatives_To_Index(i, j);
-                xy_Der = Index_To_Deriv(Index).reshape(-1);
+                xy_Der = Index_to_xy_Derivatives(Index).reshape(-1);
 
                 self.assertEqual(xy_Der[0].item(), i);
                 self.assertEqual(xy_Der[1].item(), j);
@@ -290,9 +290,9 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
         Max_Sub_Indices      : int = random.randrange(1, 6);
         Num_Sub_Index_Values : int = random.randrange(2, 15);
 
-        MI_To_Col = Multi_Index_To_Col_Number(
-                        Max_Sub_Indices      = Max_Sub_Indices,
-                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+        Multi_Index_To_Col_Number = Multi_Index_To_Col_Number_Class(
+                                        Max_Sub_Indices      = Max_Sub_Indices,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
 
         # Now, generate the set of all possible multi-indices with at most
         # Max_Sub_Indices sub-indices, each of which can take on
@@ -326,7 +326,7 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
 
             for j in range(0, Num_k_Indices):
                 # Each multi-index should be mapped to a value in {0, 1,... Total_Indices - 1}.
-                Col_Num : int = MI_To_Col(Multi_Indices[k][j, :]);
+                Col_Num : int = Multi_Index_To_Col_Number(Multi_Indices[k][j, :]);
                 self.assertLess(Col_Num, Total_Indices);
                 Hit_Counter[Col_Num] += 1;
 
@@ -334,7 +334,7 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
                 #print("[ ", end = '');
                 #for i in range(0, k + 1):
                 #    print("%2d " % Multi_Index[i], end = '');
-                #print("] -> %d" % MI_To_Col(Multi_Index));
+                #print("] -> %d" % Multi_Index_To_Col_Number(Multi_Index));
 
         # Check that each element of the range is hit exactly once.
         for i in range(Total_Indices):
@@ -348,7 +348,7 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
         # that the composition of the two functions, in either order, gives
         # the identity map.
 
-        Max_Sub_Indices : int      = random.randrange(1, 6);
+        Max_Sub_Indices      : int = random.randrange(1, 6);
         Num_Sub_Index_Values : int = random.randrange(2, 10);
 
         # First, we should generate a list of all multi-indices. We'll need this
@@ -370,19 +370,19 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
             Multi_Indices.append(k_Indices);
 
         # Initialize the Col_Num to Multi_Index map.
-        Col_To_MI = Col_Number_To_Multi_Index(
-                        Max_Sub_Indices      = Max_Sub_Indices,
-                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+        Col_Number_To_Multi_Index = Col_Number_To_Multi_Index_Class(
+                                        Max_Sub_Indices      = Max_Sub_Indices,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
 
-        MI_To_Col = Multi_Index_To_Col_Number(
-                        Max_Sub_Indices      = Max_Sub_Indices,
-                        Num_Sub_Index_Values = Num_Sub_Index_Values);
+        Multi_Index_To_Col_Number = Multi_Index_To_Col_Number_Class(
+                                        Max_Sub_Indices      = Max_Sub_Indices,
+                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
 
         # Test that Col_Number_To_Multi_Index maps column numbers to the correct
         # Indicies.
         for i in range(0, Total_Indices):
-            Multi_Index_i = Col_To_MI(i);
-            Col_Num_i     = MI_To_Col(Multi_Index_i);
+            Multi_Index_i = Col_Number_To_Multi_Index(i);
+            Col_Num_i     = Multi_Index_To_Col_Number(Multi_Index_i);
             self.assertEqual(Col_Num_i, i);
 
             #print("%3d -> [" % i, end = '');
