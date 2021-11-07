@@ -42,8 +42,8 @@ def Generate_Points(
 
     # Make a tensor to hold all the points.
     Points = torch.empty((Num_Points, Num_Dim),
-                         dtype = numpy.int64,
-                         device = Device);
+                          dtype  = torch.float32,
+                          device = Device);
 
     # Populate the coordinates in Points, one coordinate at a time.
     for j in range(Num_Dim):
