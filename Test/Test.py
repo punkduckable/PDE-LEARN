@@ -21,7 +21,7 @@ from Mappings import xy_Derivatives_to_Index, Index_to_xy_Derivatives_Class, Ind
                      Num_Multi_Indices, Multi_Indices_Array, \
                      Multi_Index_to_Col_Number_Class, Col_Number_to_Multi_Index_Class;
 from Points import Generate_Points;
-from Loss import Coll_Loss, L0_Approx_Loss;
+from Loss import Coll_Loss, L0_Approx_Loss, Lp_Loss;
 
 
 class Polynomial_1d:
@@ -516,6 +516,55 @@ class Loss_Test(unittest.TestCase):
                                         Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
         # Check that it worked!
         self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
+
+
+
+    def test_Lp_Loss(self):
+        ########################################################################
+        # Test 1: Xi = 0.
+
+        # Instantiate Xi.
+        N : int   = random.randrange(5, 100);
+        Xi        = torch.zeros(N, dtype = torch.float32);
+        p : float = random.uniform(.01, .1);
+
+        # In this case, we expect |Xi[0]|^p + ... |Xi[N-1]|^p = 0.
+        Predict : float = 0;
+        Actual  : float = Lp_Loss(Xi = Xi, p = p).item();
+
+        # Check results
+        epsilon : float = .00001;
+        self.assertLess(abs(Predict - Actual), epsilon);
+
+
+        ########################################################################
+        # Test 2 : All componnts of Xi are the same.
+
+        # Now replace Xi with a randomly selected value.
+        x  = random.uniform(.01, .1);
+        Xi = torch.full_like(Xi, x);
+
+        # In this case, we expect the result to be N*(x^p).
+        Predict = N*(x ** p);
+        Actual  = Lp_Loss(Xi = Xi, p = p).item();
+
+        # Check results
+        self.assertLess(abs(Predict - Actual), epsilon);
+
+        ########################################################################
+        # Test 3 : a random number of components of Xi are the same, the rest
+        # are zero.
+
+        M : int = random.randrange(1, N - 1);
+        Xi[M:] = 0;
+
+        # In this case, we expect the result to be M*(x^p).
+        Predict = M*(x **p );
+        Actual = Lp_Loss(Xi = Xi, p = p).item();
+
+        self.assertLess(abs(Predict - Actual), epsilon);
+        print("p = %f, x = %f, M = %d, Predict = %lf, actual = %f" % (p, x, M, Predict, Actual));
+
 
     def test_L0_Approx_Loss(self):
         ########################################################################

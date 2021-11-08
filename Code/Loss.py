@@ -170,6 +170,35 @@ def Coll_Loss(
 
 
 
+def Lp_Loss(Xi : torch.Tensor, p : float):
+    """ This function approximates the L0 norm of Xi by summing the pth powers
+    of the components of Xi. In particular, it evaluates
+        |Xi[1]|^p + |Xi[2]|^p + ... + |Xi[N]|^p
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
+
+    p: The "p" in in the expression above
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+        |Xi[1]|^p + |Xi[2]|^p + ... + |Xi[N]|^p
+    where N is the number of components of Xi. """
+
+    assert(p > 0)
+
+    # First, take the absolute value of the components of Xi.
+    Abs_Xi = torch.abs(Xi);
+
+    # Now, raise the components to the pth power and sum.
+    Abs_Xi_p = torch.pow(Abs_Xi, p);
+    return Abs_Xi_p.sum();
+
+
+
 def L0_Approx_Loss(Xi : torch.Tensor, s : float):
     """ This function returns an approximation to the L0 norm of Xi. Notice that
     if x is a real number then,
