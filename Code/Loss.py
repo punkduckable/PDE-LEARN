@@ -100,15 +100,15 @@ def Coll_Loss(
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term.mul_((Dx_U[Num_Deriv][:, 0]).reshape(-1));
+                ith_Lib_Term = torch.mul(ith_Lib_Term, (Dx_U[Num_Deriv][:, 0]).reshape(-1));
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
-            Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+            Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
 
         # Finally, add on the constant term (the final component of Xi!)
         Ones_Col = torch.ones_like(Dt_U);
-        Library_Xi_Product.add_(Ones_Col.mul_(Xi[Total_Indices]));
+        Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
         # Now, compute the pointwise square error between Dt_U and the
         # Library_Xi_Product.
@@ -151,15 +151,15 @@ def Coll_Loss(
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term.mul_((Dxy_U[Num_Deriv][:, Num_y_Deriv]).reshape(-1));
+                ith_Lib_Term = torch.mul(ith_Lib_Term, (Dxy_U[Num_Deriv][:, Num_y_Deriv]).reshape(-1));
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
-            Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+            Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
 
         # Finally, add on the constant term (the final component of Xi!)
         Ones_Col = torch.ones_like(Dt_U);
-        Library_Xi_Product.add_(Ones_Col.mul_(Xi[Total_Indices]));
+        Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
         # Now, compute the pointwise square error between Dt_U and the
         # Library_Xi_Product.
@@ -170,30 +170,36 @@ def Coll_Loss(
 
 
 
-def Lp_Loss(Xi : torch.Tensor, p : float):
-    """ This function returns the "p-norm" (it's not a norm for p < 1) of Xi.
+def L0_Approx_Loss(Xi : torch.Tensor, s : float):
+    """ This function returns an approximation to the L0 norm of Xi. Notice that
+    if x is a real number then,
+            lim_{s -> 0} 1 - exp(-x^2/s) = { 0    if x = 0
+                                           { 1    if x != 0
+    Thus, if we choose s to be small, then
+            N - ( exp(-Xi_1^2/s^2) + exp(-Xi_2^2/s^2) + ... + exp(-Xi_N^2/s^2) )
+    will approximate the L0 norm of x. This function evaluates the expression
+    above.
 
     ----------------------------------------------------------------------------
     Arguments:
 
     Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
 
-    p: The "p" in ||Xi||_p, which is what thsi function returns.
+    s: The "s" in in the expression above
 
     ----------------------------------------------------------------------------
     Returns:
 
-    ||Xi||_p = (|Xi_1|^p + ... |Xi_N|^p)^(1/p)
+        N - ( exp(-Xi_1^2/s^2) + exp(-Xi_2^2/s^2) + ... + exp(-Xi_N^2/s^2) )
     where N is the number of components of Xi. """
 
-    # p must be positive for the following to work.
-    assert(p > 0);
+    # s must be positive for the following to work.
+    assert(s > 0);
 
-    # First, take the point-wise absolute value of Xi.
-    Abs_Xi = torch.abs(Xi);
+    # Component-wise evaluate exp(-Xi^2/s)
+    Xi2_d_s2     = torch.div(torch.square(Xi), s*s);
+    Exp_Xi2_d_s2 = torch.exp(torch.mul(Xi2_d_s2, -1));
 
-    # Now raise each component of Abs_Xi to the power of p.
-    Abs_Xi_p = torch.pow(Abs_Xi, p);
-
-    # Now add up the components and raise to the 1/p power.
-    return torch.pow(torch.sum(Abs_Xi_p), 1/p);
+    # Take the sum and subtract N from it.
+    N : int = Xi.numel();
+    return N - Exp_Xi2_d_s2.sum();

@@ -21,7 +21,7 @@ from Mappings import xy_Derivatives_to_Index, Index_to_xy_Derivatives_Class, Ind
                      Num_Multi_Indices, Multi_Indices_Array, \
                      Multi_Index_to_Col_Number_Class, Col_Number_to_Multi_Index_Class;
 from Points import Generate_Points;
-from Loss import Coll_Loss, Lp_Loss;
+from Loss import Coll_Loss, L0_Approx_Loss;
 
 
 class Polynomial_1d:
@@ -394,7 +394,7 @@ class Multi_Index_And_Col_Number(unittest.TestCase):
 
 
 
-class Coll_Loss_Test(unittest.TestCase):
+class Loss_Test(unittest.TestCase):
     def test_Coll_Loss_1D(self):
         # Set up U to be a 1d polynomial.
         n : int = 4;
@@ -516,6 +516,59 @@ class Coll_Loss_Test(unittest.TestCase):
                                         Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
         # Check that it worked!
         self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
+
+    def test_L0_Approx_Loss(self):
+        ########################################################################
+        # Test 1 : Xi = 0
+
+        # Instantiate Xi.
+        N : int = random.randrange(5, 100);
+        Xi      = torch.empty(N, dtype = torch.float32);
+        s       = random.uniform(.01, .1);
+
+        # First, try with the zero vector.
+        for i in range(N):
+            Xi[i] = 0;
+
+        # In this case, we expect the approximation to the L0 norm to give zero.
+        Predict : float = 0;
+        Actual  : float = L0_Approx_Loss(Xi = Xi, s = s).item();
+
+        epsilon : float = .00001;
+        self.assertLess(abs(Predict - Actual), epsilon);
+
+
+
+        ########################################################################
+        # Test 2 : All componnts of Xi are the same.
+
+        # Now replace Xi with a randomly selected value.
+        x  = random.uniform(.5, 1.5);
+        Xi = torch.full_like(Xi, x);
+
+        # In this case, we expect the result to be N(1 - exp(-x^2/s^2)).
+        Predict = N*(1 - math.exp(-(x**2)/(s**2)));
+        Actual  = L0_Approx_Loss(Xi = Xi, s = s).item();
+
+        self.assertLess(abs(Predict - Actual), epsilon);
+
+
+
+        ########################################################################
+        # Test 3: Fill some, but not all, of Xi's components.
+
+        Half_N = N // 2;
+        Xi = torch.zeros_like(Xi);
+        y = random.uniform(.01, .1);
+        for i in range(Half_N):
+            Xi[i] = y;
+
+        # We now expect the result to be Half_N*(1 - exp(-y^2/(s**2))) (think about it).
+        Predict = Half_N*(1 - math.exp(-(y**2)/(s**2)));
+        Actual  = L0_Approx_Loss(Xi = Xi, s = s).item();
+
+        self.assertLess(abs(Predict - Actual), epsilon);
+        #print("s = %f, y = %f, N = %d, Predict = %lf, actual = %f" % (s, y, N, Predict, Actual));
 
 
 
