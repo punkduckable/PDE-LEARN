@@ -2,7 +2,7 @@ import numpy;
 import torch;
 
 from Network import Neural_Network;
-from Mappings import Index_to_xy_Derivatives_Class, Index_To_x_Derivatives, Col_Number_To_Multi_Index_Class;
+from Mappings import Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, Col_Number_to_Multi_Index_Class;
 from Evaluate_Derivatives import Evaluate_Derivatives;
 
 
@@ -53,17 +53,20 @@ def Coll_Loss(
         Xi          : torch.Tensor,
         Coll_Points : torch.Tensor,
         Highest_Order_Derivatives : int,
-        Index_To_Derivatives,
-        Col_Number_To_Multi_Index,
+        Index_to_Derivatives,
+        Col_Number_to_Multi_Index,
         Device      : torch.device = torch.device('cpu')) -> torch.Tensor:
     """ Describe me!
 
-    Xi should be a 1D Tensor. """
+    Xi should be a 1D Tensor. If there are N distinct multi-indices, then this
+    should be an N+1 element tensor (the first N components are for the library
+    terms, the final one is for a constant term). """
 
     # First, determine the number of spatial dimensions. Sice U is a function
     # of t and x, or t and x, y, this is just one minus the input dimension of
     # U.
     Num_Spatial_Dimensions : int = U.Input_Dim - 1;
+
 
     # This code behaves differently for 1 and 2 spatial variables.
     if(Num_Spatial_Dimensions == 1):
@@ -80,10 +83,10 @@ def Coll_Loss(
         # the result to a running total.
         Library_Xi_Product = torch.zeros_like(Dt_U);
 
-        Num_Cols = torch.numel(Xi);
-        for i in range(Num_Cols):
+        Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
+        for i in range(Total_Indices):
             # First, obtain the Multi_Index associated with this column number.
-            Multi_Index     = Col_Number_To_Multi_Index(i);
+            Multi_Index     = Col_Number_to_Multi_Index(i);
             Num_Sub_Indices = Multi_Index.size;
 
             # Initialize an array for ith library term. Since we construct this
@@ -93,15 +96,19 @@ def Coll_Loss(
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
                 # First, determine how many derivatives are in the jth term.
-                Num_Deriv = Index_To_Derivatives(Multi_Index[j]);
+                Num_Deriv = Index_to_Derivatives(Multi_Index[j]);
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term.mul_(Dx_U[Num_Deriv].view(-1));
+                ith_Lib_Term.mul_((Dx_U[Num_Deriv][:, 0]).reshape(-1));
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
             Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+
+        # Finally, add on the constant term (the final component of Xi!)
+        Ones_Col = torch.ones_like(Dt_U);
+        Library_Xi_Product.add_(Ones_Col.mul_(Xi[Total_Indices]));
 
         # Now, compute the pointwise square error between Dt_U and the
         # Library_Xi_Product.
@@ -124,10 +131,10 @@ def Coll_Loss(
         # the result to a running total.
         Library_Xi_Product = torch.zeros_like(Dt_U);
 
-        Num_Cols = torch.numel(Xi);
-        for i in range(Num_Cols):
+        Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
+        for i in range(Total_Indices):
             # First, obtain the Multi_Index associated with this column number.
-            Multi_Index     = Col_Number_To_Multi_Index(i);
+            Multi_Index     = Col_Number_to_Multi_Index(i);
             Num_Sub_Indices = Multi_Index.size;
 
             # Initialize an array for ith library term. Since we construct this
@@ -137,18 +144,22 @@ def Coll_Loss(
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
                 # First, determine how many derivatives are in the jth term.
-                Num_xy_Derivs = Index_To_Derivatives(Multi_Index[j]);
+                Num_xy_Derivs = Index_to_Derivatives(Multi_Index[j]);
                 Num_x_Deriv : int = Num_xy_Derivs[0];
                 Num_y_Deriv : int = Num_xy_Derivs[1];
                 Num_Deriv = Num_x_Deriv + Num_y_Deriv;
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term.mul_(Dx_U[Num_Deriv][:, Num_y_Deriv]);
+                ith_Lib_Term.mul_((Dxy_U[Num_Deriv][:, Num_y_Deriv]).reshape(-1));
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
             Library_Xi_Product.add_(ith_Lib_Term.mul_(Xi[i]));
+
+        # Finally, add on the constant term (the final component of Xi!)
+        Ones_Col = torch.ones_like(Dt_U);
+        Library_Xi_Product.add_(Ones_Col.mul_(Xi[Total_Indices]));
 
         # Now, compute the pointwise square error between Dt_U and the
         # Library_Xi_Product.
@@ -176,7 +187,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
     where N is the number of components of Xi. """
 
     # p must be positive for the following to work.
-    assert(p > 0):
+    assert(p > 0);
 
     # First, take the point-wise absolute value of Xi.
     Abs_Xi = torch.abs(Xi);
