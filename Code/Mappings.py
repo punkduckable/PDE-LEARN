@@ -44,7 +44,57 @@ def xy_Derivatives_to_Index(
 
 
 
+def Num_Sub_Index_Values_1D(Highest_Order_Derivatives : int) -> int:
+    """ This function returnes the number of sub-index values when U is a
+    function of 1 spatial variable and Highest_Order_Derivatives specifies the
+    highest order derivative of U that is used in the library terms. For the
+    1D case, we map derivatives of U to sub-index values as follows:
+        U         -> 0
+        D_{x}U    -> 1
+        D_{x}^2 U -> 2
+        D_{x}^3 U -> 3
+        ...
+        D_{x}^n U -> n
+    Thus, Highest_Order_Derivatives + 1 is the desired value.  """
+    return Highest_Order_Derivatives + 1;
+
+
+
+def Num_Sub_Index_Values_2D(Highest_Order_Derivatives : int) -> int:
+    """ This function returnes the number of sub-index value when U is a
+    function of 2 spatial variables and Highest_Order_Derivatives specifies the
+    highest order spatial partial derivative of U that is used to construct the
+    library terms. In this  case, the function xy_Derivatives_to_Index maps
+    derivatives of U to sub-index values. There's 1 derivaitve of order zero
+    (U), 2 of order 1 (D_{x}U, D_{y}U), 3 of order 2 (D_{x}^2 U D_{x}D_{y} U,
+    D_{y}^2 U), and so on. If n = Highest_Order_Derivatives, then the total
+    number of spatial partial derivatives of U that can appear in the library
+    terms is
+        1 + 2 + .... n + 1 = (n + 1)(n + 2)//2.
+    which is precisely what this function returns. """
+
+    # alias.
+    n : int = Highest_Order_Derivatives;
+
+    # The total number of spatial partial derivatives of order <= n is
+    # 1 + 2 + ... n + (n + 1) = (n + 1)(n + 2)/2 (think about it). This is the
+    # largest index value produced by the mapping xy_Derivatives_to_Index.
+    return (n + 1)*(n + 2)//2;
+
+
+
 def Index_to_x_Derivatives(Index : int) -> int:
+    """ This function maps a sub-index value to the number of x derivatives of
+    U associated with "Index". In the 1d case, we associated spatial partial
+    derivatives of U with sub-index values as follows:
+        U         -> 0
+        D_{x} U   -> 1
+        D_{x}^2 U -> 2
+        ...
+        D_{x}^n U -> n
+    Thus, "Index" is the value we want. Thus, this function is literally the
+    identity. It exists, however, because it makes the 1d code closer to the 2d
+    code. """
     return Index;
 
 
@@ -274,6 +324,28 @@ def Multi_Indices_Array(
             position = new_position;
 
         return position;
+
+
+
+def Max_Col_Num(Max_Sub_Indices      : int,
+                Num_Sub_Index_Values : int) -> int:
+    """ This function finds the largest column number that can appear when we
+    allow multi-indices with up to Max_Sub_Indices sub-indices, each of which
+    takes on Num_Sub_Index_Values index values. Because of how
+    Multi_Index_to_Col_Number_Class works, the value we want is precisely the
+    sum over k (from k = 1 to k = Max_Sub_Indices) of the number of
+    multi-indices with k sub-indices, each of which can take on
+    Num_Sub_Index_Values values. """
+
+    # For each k, determine how many multi-indicies there are with k
+    # sub indicies.
+    Total_Indices : int = 0;
+    for k in range(1, Max_Sub_Indices + 1):
+        Total_Indices += Num_Multi_Indices(
+                            Num_Sub_Indices      = k,
+                            Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+    return Total_Indices;
 
 
 

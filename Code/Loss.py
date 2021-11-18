@@ -2,13 +2,13 @@ import numpy;
 import torch;
 
 from Network import Neural_Network;
-from Mappings import Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, Col_Number_to_Multi_Index_Class;
+from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, Col_Number_to_Multi_Index_Class;
 from Evaluate_Derivatives import Evaluate_Derivatives;
 
 
 
 def Data_Loss(
-        U : Neural_Network,
+        U           : Neural_Network,
         Data_Points : torch.Tensor,
         Data_Values : torch.Tensor) -> torch.Tensor:
     """ This function evaluates the data loss, which is the mean square
@@ -56,7 +56,7 @@ def Coll_Loss(
         Index_to_Derivatives,
         Col_Number_to_Multi_Index,
         Device      : torch.device = torch.device('cpu')) -> torch.Tensor:
-    """ Describe me!
+    """ Describe me :D
 
     Xi should be a 1D Tensor. If there are N distinct multi-indices, then this
     should be an N+1 element tensor (the first N components are for the library
@@ -83,6 +83,7 @@ def Coll_Loss(
         # the result to a running total.
         Library_Xi_Product = torch.zeros_like(Dt_U);
 
+        # First, determine the number of columns.
         Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
         for i in range(Total_Indices):
             # First, obtain the Multi_Index associated with this column number.
@@ -193,8 +194,20 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
     # First, take the absolute value of the components of Xi.
     Abs_Xi = torch.abs(Xi);
 
+    # Now, define a "Power Tensor". This tensor has the same shape as Abs_Xi.
+    # If Abs_Xi[i] is zero, then Power_Tensor[i] = 1. Otherwise,
+    # Power_Tensor[i] = p. The reason we do this is to avoid trying to evaluate
+    # p/x^(1 - p) when x = 0.
+    Power_Tensor = torch.empty_like(Abs_Xi);
+    for i in range(Abs_Xi.numel()):
+        if(Abs_Xi[i] == 0):
+            Power_Tensor[i] = 1;
+        else:
+            Power_Tensor[i] = p;
+
+
     # Now, raise the components to the pth power and sum.
-    Abs_Xi_p = torch.pow(Abs_Xi, p);
+    Abs_Xi_p = torch.pow(Abs_Xi, Power_Tensor);
     return Abs_Xi_p.sum();
 
 

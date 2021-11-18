@@ -2,14 +2,14 @@
 # Save, Load settings.
 
 # Load settings.
-Load U From Save [bool]:                         False
-Load Xi From Save [bool]:                        False
-Load Optimizer From Save [bool]:                 False
-    Load File Name [str]:                        Test
+Load U From Save [bool]:                         True
+Load Xi From Save [bool]:                        True
+Load Optimizer From Save [bool]:                 True
+    Load File Name [str]:                        Test_1
 
 # Save settings
 Save State [bool]:                               True
-    Save File Name [str]:                        Test
+    Save File Name [str]:                        Test_1
 
 
 
@@ -17,8 +17,8 @@ Save State [bool]:                               True
 # Library settings.
 
 # Library Term Settings
-Highest order derivative of U [int]:             4
-Maximum Polynomial Term Degree [int]:            3
+Highest order derivative of U [int]:             3
+Maximum Polynomial Term Degree [int]:            2
 
 
 
@@ -39,13 +39,13 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Lambda [float]:                                  1.0
+Lambda [float]:                                  .1
 
 Number of Training Data Points [int]:            5000
 Number of Testing Data Points [int]:             1000
 
-Number of Training Extraction Points [int]:      10000
-Number of Testing Extraction Points [int]:       1000
+Number of Training Collocation Points [int]:     1000
+Number of Testing Collocation Points [int]:      1000
 
 
 
@@ -54,13 +54,13 @@ Number of Testing Extraction Points [int]:       1000
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          1000
+Number of Epochs [int]:                          100
 
 
 
 ################################################################################
 # Data settings.
 
-Data File [str] :                                KdV_sine.mat
-Number of Spatial dimensions [int]:              2
-Noise Level [float] :                            0.0
+Data File [str]:                                 Burgers_Sine.mat
+Number of Spatial dimensions [int]:              1
+Noise Level [float]:                             0.0

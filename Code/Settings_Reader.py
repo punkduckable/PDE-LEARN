@@ -249,7 +249,7 @@ def Settings_Reader() -> Settings_Container:
     if( Settings.Load_U         == True or
         Settings.Load_Xi        == True or
         Settings.Load_Optimizer == True):
-        Settings.Load_File_Name = Read_Line_After(File, "Load File Name [str] :").strip();
+        Settings.Load_File_Name = Read_Line_After(File, "Load File Name [str]:").strip();
 
     # Check if we're saving to file.
     Settings.Save_State = Read_Bool_Setting(File, "Save State [bool]:");
@@ -313,11 +313,11 @@ def Settings_Reader() -> Settings_Container:
     # Read Lambda value (used to scale the p-norm of Xi).
     Settings.Lambda = float(Read_Setting(File, "Lambda [float]:"));
 
-    # Read number of testing/training data/extraction points
+    # Read number of testing/training data/collocation points
     Settings.Num_Train_Data_Points = int(Read_Setting(File, "Number of Training Data Points [int]:"));
     Settings.Num_Test_Data_Points  = int(Read_Setting(File, "Number of Testing Data Points [int]:"));
-    Settings.Num_Train_Extract_Points = int(Read_Setting(File, "Number of Training Extraction Points [int]:"));
-    Settings.Num_Test_Extract_Points  = int(Read_Setting(File, "Number of Testing Extraction Points [int]:"));
+    Settings.Num_Train_Coll_Points = int(Read_Setting(File, "Number of Training Collocation Points [int]:"));
+    Settings.Num_Test_Coll_Points  = int(Read_Setting(File, "Number of Testing Collocation Points [int]:"));
 
 
 
@@ -331,7 +331,7 @@ def Settings_Reader() -> Settings_Container:
     elif(Buffer[0] == 'L' or Buffer[0] == 'l'):
         Settings.Optimizer = "LBFGS";
     else:
-        raise Read_Error("\"Optimizer [Adam, LBFGS] :\" should be \"Adam\" or \"LBFGS\". Got " + Buffer);
+        raise Read_Error("\"Optimizer [Adam, LBFGS]:\" should be \"Adam\" or \"LBFGS\". Got " + Buffer);
 
     # Read the learning rate, number of epochs.
     Settings.Learning_Rate = float(Read_Setting(File, "Learning Rate [float]:"));
@@ -343,14 +343,14 @@ def Settings_Reader() -> Settings_Container:
     # Data settings.
 
     # Data file name. Note that the data file should NOT contain noise.
-    Settings.Data_File_Name =  Read_Setting(File, "Data File [str] :");
+    Settings.Data_File_Name =  Read_Setting(File, "Data File [str]:");
 
     # Read the number of spatial dimensions in the data set. This determines the
     # number of input dimensions of U and the nature of the library terms.
     Settings.Num_Spatial_Dimensions =  int(Read_Setting(File, "Number of Spatial dimensions [int]:"));
 
     # Noise level. This specifies how much we should corrupt the raw data set.
-    Settings.Noise_Level =  float(Read_Setting(File, "Noise Level [float] :"));
+    Settings.Noise_Level =  float(Read_Setting(File, "Noise Level [float]:"));
 
     # All done! Return the settings!
     File.close();

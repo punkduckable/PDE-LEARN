@@ -1,4 +1,4 @@
-import numpy as np;
+import numpy;
 import torch;
 import random;
 import scipy.io;
@@ -46,10 +46,10 @@ def Data_Loader(Settings : Settings_Container):
     data_in = scipy.io.loadmat(Data_File_Path);
 
     # Fetch the true solution.
-    U_Sol_In = (np.real(data_in['usol'])).astype(dtype = numpy.float32);
+    U_Sol_In = (numpy.real(data_in['usol'])).astype(dtype = numpy.float32);
 
     # Add noise.
-    Noisy_Data = U_Sol_In + (Settings.Noise_Proportion)*np.std(U_Sol_In)*np.random.randn(*U_Sol_In.shape);
+    Noisy_Data = U_Sol_In + (Settings.Noise_Level)*numpy.std(U_Sol_In)*numpy.random.randn(*U_Sol_In.shape);
 
     # We have to handle the cases "U is a function of 1 spatial variable" and
     # "U is a function of two spatial variables" separatly.
@@ -68,8 +68,8 @@ def Data_Loader(Settings : Settings_Container):
 
         for i in range(num_x_values):
             for j in range(num_t_values):
-                t_coords_matrix[i, j] = t_coords[j];
-                x_coords_matrix[i, j] = x_coords[i];
+                t_coords_matrix[i, j] = t_values[j];
+                x_coords_matrix[i, j] = x_values[i];
 
         # Now, stitch successive the rows of the coordinate matricies together
         # to make a 1d array. We interpert the result as a 1 column matrix.
@@ -80,7 +80,7 @@ def Data_Loader(Settings : Settings_Container):
         Noisy_Data_List = Noisy_Data.flatten();
 
         # horizontally stack the coordinate lists to make a list of coordiinates
-        Coords = numpy.hstack((t_coords_list, x_coords_list))
+        Points = numpy.hstack((t_coords_list, x_coords_list))
 
         # Determine the upper and lower spatial/temporal bounds. Technically
         # this won't include part of the domain if we use peroidic BCs, but I'm
@@ -97,15 +97,15 @@ def Data_Loader(Settings : Settings_Container):
 
         # Now, set up the testing, training coordinates. Randomly select
         # Num_Training_Points, Num_Testing_Points coordinate indicies.
-        Train_Indicies = np.random.choice(Coords.shape[0], Settings.Num_Train_Data_Points, replace = False);
-        Test_Indicies  = np.random.choice(Coords.shape[0], Settings.Num_Test_Data_Points , replace = False);
+        Train_Indicies = numpy.random.choice(Points.shape[0], Settings.Num_Train_Data_Points, replace = False);
+        Test_Indicies  = numpy.random.choice(Points.shape[0], Settings.Num_Test_Data_Points , replace = False);
 
         # Now select the corresponding testing, training data points, values.
         # Add everything to the Container.
-        Container.Train_Coords = torch.from_numpy(Coords[Train_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
+        Container.Train_Points = torch.from_numpy(Points[Train_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
         Container.Train_Data   = torch.from_numpy(Noisy_Data_List[Train_Indicies]).to(dtype = torch.float32, device = Settings.Device);
 
-        Container.Test_Coords = torch.from_numpy(Coords[Test_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
+        Container.Test_Points = torch.from_numpy(Points[Test_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
         Container.Test_Data   = torch.from_numpy(Noisy_Data_List[Test_Indicies]).to(dtype = torch.float32, device = Settings.Device);
 
         # The container is now full. Return it!
@@ -129,10 +129,10 @@ def Data_Loader(Settings : Settings_Container):
 
         for i in range(num_t_values):
             for j in range(num_x_values):
-                for k in range(num_y_values);
-                    t_coords_matrix[i, j, k] = t_coords[i];
-                    x_coords_matrix[i, j, k] = x_coords[j];
-                    x_coords_matrix[i, j, k] = y_coords[k];
+                for k in range(num_y_values):
+                    t_coords_matrix[i, j, k] = t_values[i];
+                    x_coords_matrix[i, j, k] = x_values[j];
+                    x_coords_matrix[i, j, k] = y_values[k];
 
 
         # Now, stitch successive the rows of the coordinate matricies together
@@ -165,8 +165,8 @@ def Data_Loader(Settings : Settings_Container):
 
         # Now, set up the testing, training coordinates. Randomly select
         # Num_Training_Points, Num_Testing_Points coordinate indicies.
-        Train_Indicies = np.random.choice(Coords.shape[0], Settings.Num_Train_Data_Points, replace = False);
-        Test_Indicies  = np.random.choice(Coords.shape[0], Settings.Num_Test_Data_Points , replace = False);
+        Train_Indicies = numpy.random.choice(Coords.shape[0], Settings.Num_Train_Data_Points, replace = False);
+        Test_Indicies  = numpy.random.choice(Coords.shape[0], Settings.Num_Test_Data_Points , replace = False);
 
         # Now select the corresponding testing, training data points, values.
         # Add everything to the Container.
