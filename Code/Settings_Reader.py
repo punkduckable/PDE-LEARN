@@ -307,11 +307,14 @@ def Settings_Reader() -> Settings_Container:
     ############################################################################
     # Loss settings.
 
-    # Read p value (for L^p norm of Xi in loss function).
-    Settings.p = float(Read_Setting(File, "p [float]:"));
+    # Read p, delta values (used in the Lp loss function).
+    Settings.p      = float(Read_Setting(File, "p [float]:"));
+    Settings.delta  = float(Read_Setting(File, "delta [float]:"));
 
     # Read Lambda value (used to scale the p-norm of Xi).
     Settings.Lambda = float(Read_Setting(File, "Lambda [float]:"));
+
+
 
     # Read number of testing/training data/collocation points
     Settings.Num_Train_Data_Points = int(Read_Setting(File, "Number of Training Data Points [int]:"));

@@ -1,5 +1,6 @@
 import numpy;
 import torch;
+import math;
 
 from Network import Neural_Network;
 from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, Col_Number_to_Multi_Index_Class;
@@ -171,10 +172,13 @@ def Coll_Loss(
 
 
 
-def Lp_Loss(Xi : torch.Tensor, p : float):
-    """ This function approximates the L0 norm of Xi by summing the pth powers
-    of the components of Xi. In particular, it evaluates
-        |Xi[1]|^p + |Xi[2]|^p + ... + |Xi[N]|^p
+def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
+    """ This function approximates the L0 norm of Xi using the following
+    quantity:
+        w_1*|Xi[1]|^2 + w_2*|Xi[2]|^2 + ... + w_N*|Xi[N]|^2
+    Where, for each k,
+        w_k = 1/max{delta, |Xi[k]|}^{p - 2}.
+    (this ensures we're not dividing by zero!)
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -183,32 +187,39 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
     p: The "p" in in the expression above
 
+    delta: the "delta" in the expression above.
+
     ----------------------------------------------------------------------------
     Returns:
 
-        |Xi[1]|^p + |Xi[2]|^p + ... + |Xi[N]|^p
+        w_1*|Xi[1]|^p + w_2*|Xi[2]|^p + ... + w_N*|Xi[N]|^p
     where N is the number of components of Xi. """
 
-    assert(p > 0)
+    assert(p > 0 and p < 2)
 
-    # First, take the absolute value of the components of Xi.
-    Abs_Xi = torch.abs(Xi);
+    # First, square the components of Xi. Also, make a doule precision copy of
+    # Xi that is detached from Xi's graph.
+    Xi_2       = torch.mul(Xi, Xi);
+    Xi_Detach  = torch.detach(Xi).to(dtype = torch.float64);
 
-    # Now, define a "Power Tensor". This tensor has the same shape as Abs_Xi.
-    # If Abs_Xi[i] is zero, then Power_Tensor[i] = 1. Otherwise,
-    # Power_Tensor[i] = p. The reason we do this is to avoid trying to evaluate
-    # p/x^(1 - p) when x = 0.
-    Power_Tensor = torch.empty_like(Abs_Xi);
-    for i in range(Abs_Xi.numel()):
-        if(Abs_Xi[i] == 0):
-            Power_Tensor[i] = 1;
-        else:
-            Power_Tensor[i] = p;
+    # Now, define a weights tensor.
+    W               = torch.empty_like(Xi_Detach);
+    N : int         = W.numel();
+    for k in range(N):
+        # First, obtain the absolute value of the kth component of Xi, as a float.
+        Abs_Xi_k    : float = abs(Xi[k].item());
 
+        # Now, evaluate W[k].
+        W_k  = 1./((max(delta, Abs_Xi_k))**(2 - p));
+        if(math.isinf(W_k)):
+            print("W_k got to infinty");
+            print("Abs_Xi_k = %f" % Abs_Xi_k);
+            W_k = 0;
+        W[k] = W_k;
 
-    # Now, raise the components to the pth power and sum.
-    Abs_Xi_p = torch.pow(Abs_Xi, Power_Tensor);
-    return Abs_Xi_p.sum();
+    # Finally, evaluate the element-wise product of Xi and W[k].
+    W_Xi_2 = torch.mul(W, Xi_2);
+    return W_Xi_2.sum();
 
 
 

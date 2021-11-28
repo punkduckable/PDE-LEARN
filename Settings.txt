@@ -4,12 +4,12 @@
 # Load settings.
 Load U From Save [bool]:                         True
 Load Xi From Save [bool]:                        True
-Load Optimizer From Save [bool]:                 True
-    Load File Name [str]:                        Test_1
+Load Optimizer From Save [bool]:                 False
+    Load File Name [str]:                        Test_2_LBFGS
 
 # Save settings
 Save State [bool]:                               True
-    Save File Name [str]:                        Test_1
+    Save File Name [str]:                        Test_2_LBFGS_Lp
 
 
 
@@ -17,7 +17,7 @@ Save State [bool]:                               True
 # Library settings.
 
 # Library Term Settings
-Highest order derivative of U [int]:             3
+Highest order derivative of U [int]:             2
 Maximum Polynomial Term Degree [int]:            2
 
 
@@ -28,7 +28,7 @@ Maximum Polynomial Term Degree [int]:            2
 # U network.
 Number of Hidden Layers [int]:                   5
 Hidden Units per Hidden Layer [int]:             50
-Activation Function [Tanh, Rational]:            Rational
+Activation Function [Tanh, Rational]:            Tanh
 
 # Device settings.
 Train on CPU or GPU [GPU, CPU]:                  cpu
@@ -38,8 +38,9 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 ################################################################################
 # Loss settings.
 
-p [float]:                                       .1
-Lambda [float]:                                  .1
+p [float]:                                       .2
+delta [float]:                                   .0001
+Lambda [float]:                                  .00001
 
 Number of Training Data Points [int]:            5000
 Number of Testing Data Points [int]:             1000
@@ -52,8 +53,8 @@ Number of Testing Collocation Points [int]:      1000
 ################################################################################
 # Optimizer settings.
 
-Optimizer [Adam, LBFGS]:                         Adam
-Learning Rate [float]:                           .001
+Optimizer [Adam, LBFGS]:                         LBFGS
+Learning Rate [float]:                           .1
 Number of Epochs [int]:                          100
 
 

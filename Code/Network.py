@@ -52,7 +52,7 @@ class Rational(torch.nn.Module):
         D_X = b[0] + X*(b[1] + b[2]*X);
 
         # Return R = N_X/D_X. This is also applied element-wise.
-        return N_X/D_X;
+        return torch.div(N_X, D_X);
 
 
 

@@ -60,7 +60,7 @@ def main():
     # expect a list or dictionary of Parameters... not Tensors. Since we want
     # to train Xi, we set it up as a Parameter.
     Xi = torch.zeros(   Num_Library_Terms + 1,
-                        dtype           = torch.float32,
+                        dtype           = torch.float64,
                         device          = Settings.Device,
                         requires_grad   = True);
 
@@ -74,23 +74,11 @@ def main():
 
 
     ############################################################################
-    # Setup the optimizer.
+    # Load U, Xi
 
-    Params = list(U.parameters())
-    Params.append(Xi);
-
-    if  (Settings.Optimizer == "Adam"):
-        Optimizer = torch.optim.Adam(Params, lr = Settings.Learning_Rate);
-    elif(Settings.Optimizer == "LBFGS"):
-        Optimizer = torch.optim.LBFGS(Params, lr = Settings.Learning_Rate);
-    else:
-        print(("Optimizer is %s when it should be \"Adam\" or \"LBFGS\"" % Settings.Optimizer));
-        exit();
-
-    # Check if we're loading anything from file. If so, load it!
+    # First, check if we should load Xi, U from file. If so, load them!
     if( Settings.Load_U         == True or
-        Settings.Load_Xi        == True or
-        Settings.Load_Optimizer == True):
+        Settings.Load_Xi        == True):
 
         # Load the saved checkpoint. Make sure to map it to the correct device.
         Load_File_Path : str = "../Saves/" + Settings.Load_File_Name;
@@ -102,12 +90,36 @@ def main():
         if(Settings.Load_Xi == True):
             Xi = Saved_State["Xi"];
 
-        if(Settings.Load_Optimizer  == True ):
-            Optimizer.load_state_dict(Saved_State["Optimizer"]);
 
-            # Enforce the new learning rate (do not use the saved one).
-            for param_group in Optimizer.param_groups:
-                param_group['lr'] = Settings.Learning_Rate;
+    ############################################################################
+    # Set up the optimizer.
+    # Note: we need to do this after loading Xi, since loading Xi potentially
+    # overwrites the original Xi (loading the optimizer later ensures the
+    # optimizer optimizes the correct Xi tensor).
+
+    Params = list(U.parameters());
+    Params.append(Xi);
+
+    if  (Settings.Optimizer == "Adam"):
+        Optimizer = torch.optim.Adam(Params, lr = Settings.Learning_Rate);
+    elif(Settings.Optimizer == "LBFGS"):
+        Optimizer = torch.optim.LBFGS(Params, lr = Settings.Learning_Rate);
+    else:
+        print(("Optimizer is %s when it should be \"Adam\" or \"LBFGS\"" % Settings.Optimizer));
+        exit();
+
+
+    if(Settings.Load_Optimizer  == True ):
+        # Load the saved checkpoint. Make sure to map it to the correct device.
+        Load_File_Path : str = "../Saves/" + Settings.Load_File_Name;
+        Saved_State = torch.load(Load_File_Path, map_location = Settings.Device);
+
+        # Now load the optimizer.
+        Optimizer.load_state_dict(Saved_State["Optimizer"]);
+
+        # Enforce the new learning rate (do not use the saved one).
+        for param_group in Optimizer.param_groups:
+            param_group['lr'] = Settings.Learning_Rate;
 
 
     ############################################################################
@@ -148,6 +160,7 @@ def main():
                     Index_to_Derivatives        = Index_to_Derivatives,
                     Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                     p                           = Settings.p,
+                    delta                       = Settings.delta,
                     Lambda                      = Settings.Lambda,
                     Optimizer                   = Optimizer,
                     Device                      = Settings.Device);
@@ -172,6 +185,7 @@ def main():
                 Index_to_Derivatives        = Index_to_Derivatives,
                 Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                 p                           = Settings.p,
+                delta                       = Settings.delta,
                 Lambda                      = Settings.Lambda,
                 Device                      = Settings.Device);
 
@@ -188,6 +202,7 @@ def main():
                 Index_to_Derivatives        = Index_to_Derivatives,
                 Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                 p                           = Settings.p,
+                delta                       = Settings.delta,
                 Lambda                      = Settings.Lambda,
                 Device                      = Settings.Device);
 
