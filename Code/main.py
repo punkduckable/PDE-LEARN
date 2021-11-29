@@ -287,6 +287,11 @@ def Print_PDE(Xi : torch.Tensor,
                     print("(D_x^%d D_y^%d U)" % (Num_x_Deriv, Num_y_Deriv), end = '');
         print("");
 
+    # Now print out the constant term.
+    if(Xi[N - 1] != 0):
+        print("+ %7.4f" % Xi[N - 1].item());
+
+
 
 if(__name__ == "__main__"):
     main();
