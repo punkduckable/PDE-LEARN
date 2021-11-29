@@ -177,7 +177,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
     quantity:
         w_1*|Xi[1]|^2 + w_2*|Xi[2]|^2 + ... + w_N*|Xi[N]|^2
     Where, for each k,
-        w_k = 1/max{delta, |Xi[k]|}^{p - 2}.
+        w_k = 1/max{delta, |Xi[k]|^{p - 2}}.
     (this ensures we're not dividing by zero!)
 
     ----------------------------------------------------------------------------
@@ -210,11 +210,15 @@ def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
         Abs_Xi_k    : float = abs(Xi[k].item());
 
         # Now, evaluate W[k].
-        W_k  = 1./((max(delta, Abs_Xi_k))**(2 - p));
+        W_k  = 1./max(delta, Abs_Xi_k**(2 - p));
+
+        # Check for infinity (which can happen, unfortuneatly, if delta is too
+        # small). If so, remedy it.
         if(math.isinf(W_k)):
             print("W_k got to infinty");
             print("Abs_Xi_k = %f" % Abs_Xi_k);
             W_k = 0;
+
         W[k] = W_k;
 
     # Finally, evaluate the element-wise product of Xi and W[k].

@@ -1,5 +1,6 @@
 import numpy;
 import torch;
+import time;
 
 from Settings_Reader import Settings_Reader, Settings_Container;
 from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
@@ -20,8 +21,13 @@ def main():
     for (Setting, Value) in Settings.__dict__.items():
         print(("%-25s = " % Setting) + str(Value));
 
-    # Mke sure the user only wants two spatial dimensions.
+    # Make sure the user only wants two spatial dimensions.
     assert(Settings.Num_Spatial_Dimensions == 1 or Settings.Num_Spatial_Dimensions == 2)
+
+    # Start a setup timer.
+    Setup_Timer : float = time.perf_counter();
+    print("Setting up... ", end = '');
+
 
     ############################################################################
     # Determine the number of index values, library terms.
@@ -139,9 +145,15 @@ def main():
         Index_to_Derivatives = Index_to_xy_Derivatives_Class(
                                         Highest_Order_Derivatives   = Settings.Highest_Order_Derivatives);
 
+    # Setup is now complete. Report time.
+    print("Done! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
+
 
     ############################################################################
     # Run the Epochs!
+
+    Epoch_Timer : float = time.perf_counter();
+    print("Running %d epochs..." % Settings.Num_Epochs, end = '');
 
     for t in range(Settings.Num_Epochs):
         # First, generate new training collocation points.
@@ -213,6 +225,10 @@ def main():
                 % (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss, Train_Data_Loss + Train_Coll_Loss + Train_Lp_Loss));
         else:
             print(("Epoch #%-4d | "   % t));
+
+    Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
+    print("Done! It took %7.2fs," % Epoch_Runtime);
+    print("an average of %7.2fs per epoch." % (Epoch_Runtime / Settings.Num_Epochs));
 
 
     ############################################################################
