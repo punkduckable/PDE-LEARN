@@ -307,9 +307,8 @@ def Settings_Reader() -> Settings_Container:
     ############################################################################
     # Loss settings.
 
-    # Read p, delta values (used in the Lp loss function).
+    # Read p values (used in the Lp loss function).
     Settings.p      = float(Read_Setting(File, "p [float]:"));
-    Settings.delta  = float(Read_Setting(File, "delta [float]:"));
 
     # Read Lambda value (used to scale the p-norm of Xi).
     Settings.Lambda = float(Read_Setting(File, "Lambda [float]:"));

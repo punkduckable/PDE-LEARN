@@ -8,7 +8,7 @@ Load Optimizer From Save [bool]:                 False
     Load File Name [str]:                        Test_2_LBFGS
 
 # Save settings
-Save State [bool]:                               True
+Save State [bool]:                               False
     Save File Name [str]:                        Test_2_LBFGS_Lp
 
 
@@ -39,7 +39,6 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .2
-delta [float]:                                   .0001
 Lambda [float]:                                  .00001
 
 Number of Training Data Points [int]:            5000
@@ -53,8 +52,8 @@ Number of Testing Collocation Points [int]:      1000
 ################################################################################
 # Optimizer settings.
 
-Optimizer [Adam, LBFGS]:                         LBFGS
-Learning Rate [float]:                           .1
+Optimizer [Adam, LBFGS]:                         Adam
+Learning Rate [float]:                           .001
 Number of Epochs [int]:                          100
 
 

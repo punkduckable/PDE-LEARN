@@ -172,7 +172,6 @@ def main():
                     Index_to_Derivatives        = Index_to_Derivatives,
                     Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                     p                           = Settings.p,
-                    delta                       = Settings.delta,
                     Lambda                      = Settings.Lambda,
                     Optimizer                   = Optimizer,
                     Device                      = Settings.Device);
@@ -197,7 +196,6 @@ def main():
                 Index_to_Derivatives        = Index_to_Derivatives,
                 Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                 p                           = Settings.p,
-                delta                       = Settings.delta,
                 Lambda                      = Settings.Lambda,
                 Device                      = Settings.Device);
 
@@ -214,7 +212,6 @@ def main():
                 Index_to_Derivatives        = Index_to_Derivatives,
                 Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
                 p                           = Settings.p,
-                delta                       = Settings.delta,
                 Lambda                      = Settings.Lambda,
                 Device                      = Settings.Device);
 

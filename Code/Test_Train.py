@@ -19,7 +19,6 @@ def Training(
         Index_to_Derivatives,
         Col_Number_to_Multi_Index   : Col_Number_to_Multi_Index_Class,
         p                           : float,
-        delta                       : float,
         Lambda                      : float,
         Optimizer                   : torch.optim.Optimizer,
         Device                      : torch.device = torch.device('cpu')) -> None:
@@ -103,8 +102,7 @@ def Training(
                 +
 
                 Lambda*Lp_Loss( Xi    = Xi,
-                                p     = p,
-                                delta = delta));
+                                p     = p));
 
         # Back-propigate to compute gradients of Loss with respect to network
         # parameters (only do if this if the loss requires grad)
@@ -128,7 +126,6 @@ def Testing(
         Index_to_Derivatives,
         Col_Number_to_Multi_Index   : Col_Number_to_Multi_Index_Class,
         p                           : float,
-        delta                       : float,
         Lambda                      : float,
         Device                      : torch.device = torch.device('cpu')) -> Tuple[float, float]:
     """ This function evaluates the losses.
@@ -202,8 +199,7 @@ def Testing(
 
     Lambda_Lp_Loss_Value : float = Lambda*Lp_Loss(
             Xi    = Xi,
-            p     = p,
-            delta = delta).item();
+            p     = p).item();
 
     # Return the losses.
     return (Data_Loss_Value, Coll_Loss_Value, Lambda_Lp_Loss_Value);

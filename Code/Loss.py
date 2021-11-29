@@ -172,13 +172,13 @@ def Coll_Loss(
 
 
 
-def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
+def Lp_Loss(Xi : torch.Tensor, p : float):
     """ This function approximates the L0 norm of Xi using the following
     quantity:
         w_1*|Xi[1]|^2 + w_2*|Xi[2]|^2 + ... + w_N*|Xi[N]|^2
     Where, for each k,
         w_k = 1/max{delta, |Xi[k]|^{p - 2}}.
-    (this ensures we're not dividing by zero!)
+    (where delta is some small number that ensures we're not dividing by zero!)
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -186,8 +186,6 @@ def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
     Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
 
     p: The "p" in in the expression above
-
-    delta: the "delta" in the expression above.
 
     ----------------------------------------------------------------------------
     Returns:
@@ -199,8 +197,9 @@ def Lp_Loss(Xi : torch.Tensor, p : float, delta : float):
 
     # First, square the components of Xi. Also, make a doule precision copy of
     # Xi that is detached from Xi's graph.
-    Xi_2       = torch.mul(Xi, Xi);
-    Xi_Detach  = torch.detach(Xi).to(dtype = torch.float64);
+    delta : float = .000001;
+    Xi_2          = torch.mul(Xi, Xi);
+    Xi_Detach     = torch.detach(Xi).to(dtype = torch.float64);
 
     # Now, define a weights tensor.
     W               = torch.empty_like(Xi_Detach);
