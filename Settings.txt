@@ -50,11 +50,18 @@ Number of Testing Collocation Points [int]:      1000
 
 
 ################################################################################
+# Threshold Settings.
+
+Threshold [float]:                               .001
+
+
+
+################################################################################
 # Optimizer settings.
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          100
+Number of Epochs [int]:                          200
 
 
 

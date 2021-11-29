@@ -146,10 +146,10 @@ def Coll_Loss(
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
                 # First, determine how many derivatives are in the jth term.
-                Num_xy_Derivs = Index_to_Derivatives(Multi_Index[j]);
+                Num_xy_Derivs     = Index_to_Derivatives(Multi_Index[j]);
                 Num_x_Deriv : int = Num_xy_Derivs[0];
                 Num_y_Deriv : int = Num_xy_Derivs[1];
-                Num_Deriv = Num_x_Deriv + Num_y_Deriv;
+                Num_Deriv : int   = Num_x_Deriv + Num_y_Deriv;
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.

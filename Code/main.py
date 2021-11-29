@@ -7,11 +7,12 @@ from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
                         Num_Sub_Index_Values_1D, Num_Sub_Index_Values_2D, \
                         Max_Col_Num, \
                         Col_Number_to_Multi_Index_Class;
-from Loss import Data_Loss, Lp_Loss, Coll_Loss;
-from Network import Rational, Neural_Network;
-from Data_Loader import Data_Loader;
-from Test_Train import Testing, Training;
-from Points import Generate_Points;
+from Loss           import Data_Loss, Lp_Loss, Coll_Loss;
+from Network        import Rational, Neural_Network;
+from Data_Loader    import Data_Loader;
+from Test_Train     import Testing, Training;
+from Points         import Generate_Points;
+from Xi             import Print_PDE;
 
 
 
@@ -153,7 +154,7 @@ def main():
     # Run the Epochs!
 
     Epoch_Timer : float = time.perf_counter();
-    print("Running %d epochs..." % Settings.Num_Epochs, end = '');
+    print("Running %d epochs..." % Settings.Num_Epochs);
 
     for t in range(Settings.Num_Epochs):
         # First, generate new training collocation points.
@@ -227,12 +228,27 @@ def main():
 
 
     ############################################################################
+    # Threshold Xi.
+
+    # Cycle through components of Xi. Remove all whose magnitude is smaller
+    # than the threshold.
+    Pruned_Xi = torch.empty_like(Xi);
+    N   : int = Xi.numel();
+    for k in range(N):
+        Abs_Xi_k = abs(Xi[k].item());
+        if(Abs_Xi_k < Settings.Threshold):
+            Pruned_Xi[k] = 0;
+        else:
+            Pruned_Xi[k] = Xi[k];
+
+
+    ############################################################################
     # Report final PDE
 
-    Print_PDE(  Xi                        = Xi,
+    Print_PDE(  Xi                        = Pruned_Xi,
                 Num_Spatial_Dimensions    = Settings.Num_Spatial_Dimensions,
-                Col_Number_to_Multi_Index = Col_Number_to_Multi_Index,
-                Index_to_Derivatives      = Index_to_Derivatives);
+                Index_to_Derivatives      = Index_to_Derivatives,
+                Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
 
 
     ############################################################################
@@ -244,52 +260,6 @@ def main():
                     "Xi"        : Xi,
                     "Optimizer" : Optimizer.state_dict()},
                     Save_File_Path);
-
-
-def Print_PDE(Xi : torch.Tensor,
-              Num_Spatial_Dimensions : int,
-              Col_Number_to_Multi_Index,
-              Index_to_Derivatives):
-    """ This function prints out the PDE encoded in Xi. Suppose that Xi has
-    N + 1 components. Then Xi[0] - Xi[N - 1] correspond to PDE library terms,
-    while Xi[N] correponds to a constant. Given some k in {0,1,... ,N-1} we
-    first map k to a multi-index (using Col_Number_to_Multi_Index). We then map
-    each sub-index to a spatial partial derivative of x. We then print out this
-    spatial derivative. """
-
-    print("D_t U = ");
-
-    N : int = Xi.numel();
-    for k in range(0, N - 1):
-        # Fetch the kth component of Xi.
-        Xi_k = Xi[k].item();
-
-        # If it's non-zero, fetch the associated multi-Inde
-        if(Xi_k == 0):
-            continue;
-        Multi_Index = Col_Number_to_Multi_Index(k);
-
-        # Cycle through the sub-indices, printing out the associated derivatives
-        print("+ %7.4f" % Xi_k, end = '');
-        Num_Indices = Multi_Index.size;
-
-        for j in range(0, Num_Indices):
-            if  (Num_Spatial_Dimensions == 1):
-                print("(D_x^%d U)" % Index_to_Derivatives(Multi_Index[j].item()), end = '');
-
-            elif(Num_Spatial_Dimensions == 2):
-                Num_x_Deriv, Num_y_Deriv = Index_to_Derivatives(Multi_Index[j].item());
-                if(Num_x_Deriv == 0):
-                    print("(D_y^%d U)" % Num_y_Deriv, end = '');
-                elif(Num_y_Deriv == 0):
-                    print("(D_x^%d U)" % Num_x_Deriv, end = '');
-                else:
-                    print("(D_x^%d D_y^%d U)" % (Num_x_Deriv, Num_y_Deriv), end = '');
-        print("");
-
-    # Now print out the constant term.
-    if(Xi[N - 1] != 0):
-        print("+ %7.4f" % Xi[N - 1].item());
 
 
 
