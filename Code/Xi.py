@@ -18,9 +18,10 @@ def Prune_Xi_L2(    Xi                          : torch.Tensor,
                     Highest_Order_Derivatives   : int,
                     Coords                      : torch.Tensor,
                     Device                      : torch.device = torch.device('cpu')) -> torch.Tensor:
-    """ This function prunes components of Xi.
+    """ This function prunes components of Xi. It is basically an experiment
+    gone wrong.
 
-    Fill in this description :D """
+    Maybe fill in this description :D """
 
     # To prune the components of Xi, we first need to scale each one by
     # the 2 norm of the corresponding library term evaluated at the collocation
@@ -96,14 +97,33 @@ def Print_PDE(Xi                     : torch.Tensor,
               Num_Spatial_Dimensions : int,
               Index_to_Derivatives,
               Col_Number_to_Multi_Index):
-    """ This function prints out the PDE encoded in Xi. Suppose that Xi has
+    """  This function prints out the PDE encoded in Xi. Suppose that Xi has
     N + 1 components. Then Xi[0] - Xi[N - 1] correspond to PDE library terms,
     while Xi[N] correponds to a constant. Given some k in {0,1,... ,N-1} we
     first map k to a multi-index (using Col_Number_to_Multi_Index). We then map
     each sub-index to a spatial partial derivative of x. We then print out this
     spatial derivative.
 
-    Fill in this Description :D """
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    Xi: The Xi tensor. If there are N library terms (Col_Number_to_Multi_Index.
+    Total_Indices = N), then this should be an N+1 component tensor.
+
+    Num_Spatial_Dimensions: The number of spatial dimensions in the underlying
+    data set. We need this to construct the library terms.
+
+    Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps
+    sub-index value to a number of x derivatives. If Num_Spatial_Dimensions = 2,
+    then this maps a sub-index value to a number of x and y derivatives.
+
+    Col_Number_to_Multi_Index: This maps column numbers (library term numbers)
+    to Multi-Indices.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    Nothing :D """
 
     print("D_t U = ");
 

@@ -50,18 +50,52 @@ def Data_Loss(
 
 
 def Coll_Loss(
-        U           : Neural_Network,
-        Xi          : torch.Tensor,
-        Coll_Points : torch.Tensor,
-        Highest_Order_Derivatives : int,
+        U                           : Neural_Network,
+        Xi                          : torch.Tensor,
+        Coll_Points                 : torch.Tensor,
+        Highest_Order_Derivatives   : int,
         Index_to_Derivatives,
         Col_Number_to_Multi_Index,
-        Device      : torch.device = torch.device('cpu')) -> torch.Tensor:
-    """ Describe me :D
+        Device                      : torch.device = torch.device('cpu')) -> torch.Tensor:
+    """ Let L(U) denote the library matrix (i,j entry is the jth library term
+    evaluated at the ith collocation point. Note that we define the last library
+    term as the constant function 1). Further, let b(U) denote the vector whose
+    ith entry is the time derivative of U at the ith collocation point. Then
+    this function returns ||b(N) - L(U)Xi||_2
 
-    Xi should be a 1D Tensor. If there are N distinct multi-indices, then this
-    should be an N+1 element tensor (the first N components are for the library
-    terms, the final one is for a constant term). """
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    U: The Neural Network that approximates the solution.
+
+    Xi: A trainable (requires_grad = True) torch 1D tensor. If there are N
+    distinct multi-indices, then this should be an N+1 element tensor (the first
+    N components are for the library terms represented by multi-indices, the
+    final one is for a constant term).
+
+    Coll_Points: A 2 or 3 column tensor of coordinates. If
+    Num_Spatial_Dimensions = 1, then the ith row of this tensor holds the
+    (t, x) coordinates of the ith collocation point. If Num_Spatial_Dimensions
+    = 2, then the ith row of this tensor holds the (t, x, y) coordiante of the
+    ith collocation point.
+
+    Highest_Order_Derivatives: The highest order derivatives in our library
+    terms. We need to know this to evaluate the spatial partial derivatives
+    of Xi and, subsequently, evaluate the library terms.
+
+    Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps
+    sub-index value to a number of x derivatives. If Num_Spatial_Dimensions = 2,
+    then this maps a sub-index value to a number of x and y derivatives.
+
+    Col_Number_to_Multi_Index: This maps column numbers (library term numbers)
+    to Multi-Indices.
+
+    Device: The device (gpu or cpu) that we train on.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    A scalar value containing the collocation loss. """
 
     # First, determine the number of spatial dimensions. Sice U is a function
     # of t and x, or t and x, y, this is just one minus the input dimension of
@@ -73,10 +107,10 @@ def Coll_Loss(
     if(Num_Spatial_Dimensions == 1):
         # First, acquire the spatial and time derivatives of U.
         (Dt_U, Dx_U) = Evaluate_Derivatives(
-                            U      = U,
+                            U                         = U,
                             Highest_Order_Derivatives = Highest_Order_Derivatives,
-                            Coords = Coll_Points,
-                            Device = Device);
+                            Coords                    = Coll_Points,
+                            Device                    = Device);
 
         # Construct our approximation to Dt_U. To do this, we cycle through
         # the columns of the library. At each column, we construct the term

@@ -111,11 +111,30 @@ def Data_Loader(Settings : Settings_Container):
         # The container is now full. Return it!
         return Container;
 
-    if(Settings.Num_Spatial_Dimensions == 1):
+    if(Settings.Num_Spatial_Dimensions == 2):
         # Load t, x, y values
         t_values = data_in['t'].flatten().astype(dtype = numpy.float32);
         x_values = data_in['x'].flatten().astype(dtype = numpy.float32);
         y_values = data_in['y'].flatten().astype(dtype = numpy.float32);
+
+        """ Frankenstein code to turn a 1d data set into a 2d one (with no y
+        depndence). This allows me to test the code with two spatial dimensions
+        without actually having to generate real 2d datasets. To enable this,
+        remove the comments and replace the definition of "y_values" above
+        with the following: y_values = x_values;
+
+        Noisy_Data_1D = Noisy_Data;
+        Noisy_Data = numpy.empty((t_values.size, x_values.size, y_values.size), dtype = numpy.float32);
+        print("");
+        print("t .shape = ", end = ''); print(t_values.shape);
+        print("x .shape = ", end = ''); print(x_values.shape);
+        print("D .shape = ", end = ''); print(Noisy_Data_1D.shape);
+        print("D2.shape = ", end = ''); print(Noisy_Data.shape);
+
+        for t in range(t_values.size):
+            for x in range(x_values.size):
+                for y in range(y_values.size):
+                    Noisy_Data[t, x, y] = Noisy_Data_1D[x, t];"""
 
         # Generate the grid of (t, x) coordinates. The i,j entry of usol should
         # hold the value of the solution at the i,j coordinate.
@@ -125,14 +144,14 @@ def Data_Loader(Settings : Settings_Container):
 
         t_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
         x_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
-        x_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
+        y_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
 
         for i in range(num_t_values):
             for j in range(num_x_values):
                 for k in range(num_y_values):
                     t_coords_matrix[i, j, k] = t_values[i];
                     x_coords_matrix[i, j, k] = x_values[j];
-                    x_coords_matrix[i, j, k] = y_values[k];
+                    y_coords_matrix[i, j, k] = y_values[k];
 
 
         # Now, stitch successive the rows of the coordinate matricies together
@@ -170,10 +189,10 @@ def Data_Loader(Settings : Settings_Container):
 
         # Now select the corresponding testing, training data points, values.
         # Add everything to the Container.
-        Container.Train_Coords = torch.from_numpy(Coords[Train_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
+        Container.Train_Points = torch.from_numpy(Coords[Train_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
         Container.Train_Data   = torch.from_numpy(Noisy_Data_List[Train_Indicies]).to(dtype = torch.float32, device = Settings.Device);
 
-        Container.Test_Coords = torch.from_numpy(Coords[Test_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
+        Container.Test_Points = torch.from_numpy(Coords[Test_Indicies, :]).to(dtype = torch.float32, device = Settings.Device);
         Container.Test_Data   = torch.from_numpy(Noisy_Data_List[Test_Indicies]).to(dtype = torch.float32, device = Settings.Device);
 
         # The container is now full. Return it!

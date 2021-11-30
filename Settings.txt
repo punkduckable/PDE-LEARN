@@ -5,11 +5,11 @@
 Load U From Save [bool]:                         True
 Load Xi From Save [bool]:                        True
 Load Optimizer From Save [bool]:                 False
-    Load File Name [str]:                        Test_2_LBFGS
+    Load File Name [str]:                        Burgers_2D_Sine_Tanh_Adam
 
 # Save settings
-Save State [bool]:                               False
-    Save File Name [str]:                        Test_2_LBFGS_Lp
+Save State [bool]:                               True
+    Save File Name [str]:                        Burgers_2D_Sine_Tanh_LBFGS
 
 
 
@@ -39,12 +39,12 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .2
-Lambda [float]:                                  .00001
+Lambda [float]:                                  .0001
 
-Number of Training Data Points [int]:            5000
+Number of Training Data Points [int]:            10000
 Number of Testing Data Points [int]:             1000
 
-Number of Training Collocation Points [int]:     1000
+Number of Training Collocation Points [int]:     4000
 Number of Testing Collocation Points [int]:      1000
 
 
@@ -59,9 +59,9 @@ Threshold [float]:                               .001
 ################################################################################
 # Optimizer settings.
 
-Optimizer [Adam, LBFGS]:                         Adam
-Learning Rate [float]:                           .001
-Number of Epochs [int]:                          200
+Optimizer [Adam, LBFGS]:                         LBFGS
+Learning Rate [float]:                           .1
+Number of Epochs [int]:                          50
 
 
 
@@ -69,5 +69,5 @@ Number of Epochs [int]:                          200
 # Data settings.
 
 Data File [str]:                                 Burgers_Sine.mat
-Number of Spatial dimensions [int]:              1
+Number of Spatial dimensions [int]:              2
 Noise Level [float]:                             0.0
