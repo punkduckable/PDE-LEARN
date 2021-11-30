@@ -162,7 +162,7 @@ class Loss_Test(unittest.TestCase):
         Xi        = torch.zeros(N, dtype = torch.float32);
         p : float = random.uniform(.01, .1);
 
-        # In this case, we expect |Xi[0]|^p + ... |Xi[N-1]|^p = 0.
+        # In this case, we expect the Lp loss to be 0.
         Predict : float = 0;
         Actual  : float = Lp_Loss(Xi = Xi, p = p).item();
 
@@ -172,7 +172,7 @@ class Loss_Test(unittest.TestCase):
 
 
         ########################################################################
-        # Test 2 : All componnts of Xi are the same.
+        # Test 2 : All components of Xi are the same.
 
         # Now replace Xi with a randomly selected value.
         x  = random.uniform(.01, .1);
