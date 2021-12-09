@@ -82,7 +82,7 @@ def Training(
         if (torch.is_grad_enabled()):
             Optimizer.zero_grad();
 
-        # Evaluate the Loss (Note, we enforce a BC of 0)
+        # Evaluate the Loss
         Loss = (Coll_Loss(
                     U                           = U,
                     Xi                          = Xi,
@@ -95,14 +95,14 @@ def Training(
                 +
 
                 Data_Loss(
-                    U           = U,
-                    Data_Points = Data_Points,
-                    Data_Values = Data_Values)
+                    U                   = U,
+                    Data_Points         = Data_Points,
+                    Data_Values         = Data_Values)
 
                 +
 
-                Lambda*Lp_Loss( Xi    = Xi,
-                                p     = p));
+                Lambda*Lp_Loss( Xi      = Xi,
+                                p       = p));
 
         # Back-propigate to compute gradients of Loss with respect to network
         # parameters (only do if this if the loss requires grad)

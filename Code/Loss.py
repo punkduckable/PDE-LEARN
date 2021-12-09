@@ -183,7 +183,7 @@ def Coll_Loss(
                 Num_xy_Derivs     = Index_to_Derivatives(Multi_Index[j]);
                 Num_x_Deriv : int = Num_xy_Derivs[0];
                 Num_y_Deriv : int = Num_xy_Derivs[1];
-                Num_Deriv : int   = Num_x_Deriv + Num_y_Deriv;
+                Num_Deriv   : int = Num_x_Deriv + Num_y_Deriv;
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
@@ -233,7 +233,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
     # Xi that is detached from Xi's graph.
     delta : float = .000001;
     Xi_2          = torch.mul(Xi, Xi);
-    Xi_Detach     = torch.detach(Xi).to(dtype = torch.float64);
+    Xi_Detach     = torch.detach(Xi);
 
     # Now, define a weights tensor.
     W               = torch.empty_like(Xi_Detach);

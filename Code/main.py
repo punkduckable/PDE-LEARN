@@ -67,7 +67,7 @@ def main():
     # expect a list or dictionary of Parameters... not Tensors. Since we want
     # to train Xi, we set it up as a Parameter.
     Xi = torch.zeros(   Num_Library_Terms + 1,
-                        dtype           = torch.float64,
+                        dtype           = torch.float32,
                         device          = Settings.Device,
                         requires_grad   = True);
 
