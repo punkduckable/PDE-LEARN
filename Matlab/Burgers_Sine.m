@@ -26,7 +26,7 @@ S.init      = chebfun(@(x) -sin(pi*x/8), Domain, 'vectorize');
 disp("Solving...");
 Nx      = 256;
 Dt      = .0002;
-U_Cheb  = spin(S, N, Dt, 'plot', 'off');
+U_Cheb  = spin(S, Nx, Dt, 'plot', 'off');
 
 
 % Make the dataset....

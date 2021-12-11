@@ -27,7 +27,7 @@ S.init      = chebfun(@(x) -sin(pi*x/10), Domain, 'vectorize');
 disp("Solving...");
 Nx      = 256;
 Dt      = .0005;
-U_Cheb  = spin(S, N, Dt, 'plot', 'off');
+U_Cheb  = spin(S, Nx, Dt, 'plot', 'off');
 
 
 % Make the dataset....
@@ -46,4 +46,9 @@ x = x_range;
 save('ks_sine.mat','t','x','usol');
 
 % Plot!
-pcolor(t, x, usol); shading interp, axis tight, colormap(jet);
+hold on;
+pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
+
+xlabel('time (s)');
+ylabel('position (m)');
+title("Kuramoto–Sivashinsky equation dataset");
