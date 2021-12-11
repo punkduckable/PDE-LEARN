@@ -46,7 +46,10 @@ x = x_range;
 save('ks_sine.mat','t','x','usol');
 
 % Plot!
+figure(1);
 hold on;
+set(gca, 'FontSize', 12);
+
 pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
 
 xlabel('time (s)');
