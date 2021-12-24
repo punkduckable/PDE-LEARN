@@ -42,7 +42,7 @@ end
 disp("Saving...");
 t = Tspan;
 x = x_range;
-save('burgers_sine.mat','t','x','usol');
+save('../Data/Burgers_Sine.mat','t','x','usol');
 
 % Plot!
 figure(1);
@@ -53,4 +53,4 @@ pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
 
 xlabel('time (s)');
 ylabel('position (m)');
-title("Burgers' equation dataset");
+title("Burgers' equation dataset (Sine IC)");

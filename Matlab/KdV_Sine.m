@@ -43,7 +43,7 @@ end
 disp("Saving...");
 t = T_span;
 x = x_range;
-save('ks_sine.mat','t','x','usol');
+save('../Data/KdV_Sine.mat','t','x','usol');
 
 % Plot!
 figure(1);

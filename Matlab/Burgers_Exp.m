@@ -1,32 +1,31 @@
-% KS equation: D_t U = -(D_x^2 U) - (D_x^4 U) - (D_x U)(U)
-% with U(x, 0) = -sin(pi*x/10);
+% Burgers equation: D_t U = (D_x U)(U) + .1(D_x^2 U).
 
 
 % Set up the problem domain. I want this to run on
-%       (t, x) in [0,50] x [-10, 10]
-x_l     = -10;
-x_h     = 10;
+%       (t, x) in [0,10] x [-8, 8]
+x_l     = -8;
+x_h     = 8;
 t_l     = 0;
-t_h     = 50;
-Nt      = 251;
+t_h     = 10;
+Nt      = 201;
 Domain  = [x_l, x_h];
-T_span  = linspace(t_l, t_h, Nt);
+Tspan   = linspace(t_l, t_h, Nt);
 
 
 % Set up the spinop for Burger's equation. For this problem:
-%       L(u)    = -(D_x^2 U) - (D_x^4 U) 
+%       L(u)    = .1 (D_x^2 U) and 
 %       N(u)    = (U)(D_x U).
-%       Init(x) = -sin(pi*x/10)
-S           = spinop(Domain, T_span);
-S.lin       = @(u) -1.0*diff(u,2) - diff(u,4);
+%       Init(x) = exp(-(x + 2)^2)
+S           = spinop(Domain, Tspan);
+S.lin       = @(u) 0.1*diff(u, 2);
 S.nonlin    = @(u) -0.5*diff(u.^2);
-S.init      = chebfun(@(x) -sin(pi*x/10), Domain, 'vectorize');
+S.init      = chebfun(@(x) exp(-(x + 2)*(x + 2)), Domain, 'vectorize');
 
 
 % Solve!
 disp("Solving...");
 Nx      = 256;
-Dt      = .0005;
+Dt      = .0002;
 U_Cheb  = spin(S, Nx, Dt, 'plot', 'off');
 
 
@@ -41,9 +40,9 @@ end
 
 % Save!
 disp("Saving...");
-t = T_span;
+t = Tspan;
 x = x_range;
-save('../Data/KS_Sine.mat','t','x','usol');
+save('../Data/Burgers_Exp.mat','t','x','usol');
 
 % Plot!
 figure(1);
@@ -54,4 +53,4 @@ pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
 
 xlabel('time (s)');
 ylabel('position (m)');
-title("Kuramoto–Sivashinsky equation dataset");
+title("Burgers' equation dataset (Exp IC)");
