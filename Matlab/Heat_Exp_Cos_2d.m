@@ -1,3 +1,7 @@
+% 2D Heat equation: D_t U = .1(D_x^2 U + D_y^2 U).
+% with U(0, x, y) = 10*exp(-(x^2 + y^2)/4)*cos(x*y).
+
+
 % Set up the problem domain. I want this to work on the domain 
 %       (t, x, y) in [0, 5] x [-5, 5] x [-5, 5]
 x_l = -5;
@@ -8,7 +12,9 @@ domain      = [x_l, x_h, y_l, y_h];
 Nt          = 101;
 t_span       = linspace(0, 5, Nt);
 
-% Now set up the spinop2 operator. 
+% Now set up the spinop2 operator. For this problem:
+%       L(u) = .1*Lap(U)
+%       N(u) = 0
 S           = spinop2(domain, t_span);
 S.lin       = @(u) .1*lap(u);
 S.nonlin    = @(u) 0*u;
@@ -57,4 +63,4 @@ disp("Saving...");
 x       = x_values;
 y       = y_values;
 t       = t_span;
-save('Heat_Exp_Cos_2D.mat','t','x', 'y','usol');
+save('../Data/Heat_Exp_Cos_2D.mat','t','x', 'y','usol');

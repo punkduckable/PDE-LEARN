@@ -26,7 +26,7 @@ S.init      = chebfun(@(x) -sin(pi*x/8), Domain, 'vectorize');
 disp("Solving...");
 Nx      = 256;
 Dt      = .0002;
-U_Cheb  = spin(S, N, Dt, 'plot', 'off');
+U_Cheb  = spin(S, Nx, Dt, 'plot', 'off');
 
 
 % Make the dataset....
@@ -42,7 +42,15 @@ end
 disp("Saving...");
 t = Tspan;
 x = x_range;
-save('burgers_sine.mat','t','x','usol');
+save('../Data/Burgers_Sine.mat','t','x','usol');
 
 % Plot!
-pcolor(t, x, usol); shading interp, axis tight, colormap(jet);
+figure(1);
+hold on;
+set(gca, 'FontSize', 12);
+
+pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
+
+xlabel('time (s)');
+ylabel('position (m)');
+title("Burgers' equation dataset (Sine IC)");
