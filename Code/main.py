@@ -52,11 +52,11 @@ def main():
     # Set up U and Xi.
 
     U = Neural_Network(
-            Num_Hidden_Layers   = Settings.Sol_Num_Hidden_Layers,
-            Neurons_Per_Layer   = Settings.Sol_Units_Per_Layer,
+            Num_Hidden_Layers   = Settings.Num_Hidden_Layers,
+            Neurons_Per_Layer   = Settings.Units_Per_Layer,
             Input_Dim           = Settings.Num_Spatial_Dimensions + 1,
             Output_Dim          = 1,
-            Activation_Function = Settings.Sol_Activation_Function,
+            Activation_Function = Settings.Activation_Function,
             Device              = Settings.Device);
 
     # We set up Xi as a Parameter for.... complicated reasons. In pytorch, a

@@ -275,20 +275,22 @@ def Settings_Reader() -> Settings_Container:
     # Network settings.
 
     # Number of hidden layers in U network.
-    Settings.Sol_Num_Hidden_Layers = int(Read_Setting(File, "Number of Hidden Layers [int]:"));
+    Settings.Num_Hidden_Layers = int(Read_Setting(File, "Number of Hidden Layers [int]:"));
 
     # Number of hidden units per hidden layer in the U network.
-    Settings.Sol_Units_Per_Layer = int(Read_Setting(File, "Hidden Units per Hidden Layer [int]:"));
+    Settings.Units_Per_Layer = int(Read_Setting(File, "Hidden Units per Hidden Layer [int]:"));
 
     # Which activation function should we use?
-    Buffer = Read_Setting(File, "Activation Function [Tanh, Rational]:");
+    Buffer = Read_Setting(File, "Activation Function [Tanh, Rational, Sin]:");
     if  (Buffer[0] == 'R' or Buffer[0] == 'r'):
-        Settings.Sol_Activation_Function = "Rational";
+        Settings.Activation_Function = "Rational";
     elif(Buffer[0] == 'T' or Buffer[0] == 't'):
-        Settings.Sol_Activation_Function = "Tanh";
+        Settings.Activation_Function = "Tanh";
+    elif(Buffer[0] == 'S' or Buffer[0] == 's'):
+        Settings.Activation_Function = "Sin";
     else:
-        raise Read_Error("\"Activation Function [Tanh, Rational]:\" should be" + \
-                         "\"Tanh\" or \"Rational\" Got " + Buffer);
+        raise Read_Error("\"Activation Function [Tanh, Rational, Sin]:\" should be" + \
+                         "\"Tanh\", \"Rational\", or \"Sin\" Got " + Buffer);
 
     Buffer = Read_Setting(File, "Train on CPU or GPU [GPU, CPU]:");
     if(Buffer[0] == 'G' or Buffer[0] == 'g'):

@@ -1,5 +1,6 @@
 import numpy as np;
 import torch;
+import math;
 
 
 
@@ -56,6 +57,17 @@ class Rational(torch.nn.Module):
 
 
 
+class Sin(torch.nn.Module):
+    """ This class defines a functor which implements the sin function. When
+    you use the __call__ method for this class (which is defined in the Module
+    superclass), it calls the forward method, which applies the sin function
+    element-wise to the input. I wrote this simply to implement a sin activation
+    function. """
+    def forward(self, input : torch.Tensor) -> torch.Tensor:
+        return torch.sin(input);
+
+
+
 class Neural_Network(torch.nn.Module):
     def __init__(self,
                  Num_Hidden_Layers   : int          = 3,
@@ -79,6 +91,10 @@ class Neural_Network(torch.nn.Module):
         self.Input_Dim  : int = Input_Dim;
         self.Output_Dim : int = Output_Dim;
         self.Num_Layers : int = Num_Hidden_Layers + 1;
+
+
+        ########################################################################
+        # Set up the Layers
 
         # Initialize the Layers. We hold all layers in a ModuleList.
         self.Layers = torch.nn.ModuleList();
@@ -109,19 +125,18 @@ class Neural_Network(torch.nn.Module):
                                 out_features = Output_Dim,
                                 bias         = True ).to(dtype = torch.float32, device = Device));
 
-        # Initialize the weight matrices, bias vectors in the network.
-        for i in range(self.Num_Layers):
-            torch.nn.init.xavier_uniform_(self.Layers[i].weight);
-            torch.nn.init.zeros_(self.Layers[i].bias);
+
+        ########################################################################
+        # Set up Activation Functions
 
         # Finally, set the Network's activation functions.
         self.Activation_Functions = torch.nn.ModuleList();
         if  (Activation_Function == "Tanh"):
             for i in range(Num_Hidden_Layers):
                 self.Activation_Functions.append(torch.nn.Tanh());
-        elif(Activation_Function == "Sigmoid"):
+        elif(Activation_Function == "Sin"):
             for i in range(Num_Hidden_Layers):
-                self.Activation_Functions.append(torch.nn.Sigmoid());
+                self.Activation_Functions.append(Sin());
         elif(Activation_Function == "Rational"):
             for i in range(Num_Hidden_Layers):
                 self.Activation_Functions.append(Rational(Device = Device));
@@ -129,6 +144,41 @@ class Neural_Network(torch.nn.Module):
             print("Unknown Activation Function. Got %s" % Activation_Function);
             print("Thrown by Neural_Network.__init__. Aborting.");
             exit();
+
+
+        ########################################################################
+        # Initialize the weight matrices, bias vectors.
+
+        # If we're using Rational or Tanh networks, use xavier initialization.
+        if(Activation_Function == "Tanh" or Activation_Function == "Rational"):
+            for i in range(self.Num_Layers):
+                torch.nn.init.xavier_uniform_(  self.Layers[i].weight);
+                torch.nn.init.zeros_(           self.Layers[i].bias);
+
+        # If we're using the Sin activation function, then our networks are
+        # SIRENS. We use the initialization scheme proposed in the following
+        # paper:
+        # Sitzmann, Vincent, et al. "Implicit neural representations with
+        # periodic activation functions." arXiv preprint arXiv:2006.09661 (2020).
+        if(Activation_Function == "Sin"):
+            # I initialize my first weight matrix to be full of zeros. This is
+            # NOT what the SIREN paper says to do. However, I found that
+            # following their initialization scheme causes the derivatives of my
+            # network to explode. Zeroing out the first weight matrix
+            # initializes U as the zero map, but eliminates blowup. 
+            torch.nn.init.constant_(self.Layers[0].weight, 0);
+            torch.nn.init.zeros_(   self.Layers[0].bias);
+
+            # The SIREN paper suggests initializing the elements of every weight
+            # matrix (except for the first one) by sampling a uniform
+            # distribution over [-c/root(n), c/root(n)], where c > root(6),
+            # and n is the number of neurons in the layer. I use c = 3 > root(6).
+            #
+            # Further, for simplicity, I initialize each bias vector to be zero.
+            a : float = 3./math.sqrt(Neurons_Per_Layer);
+            for i in range(1, self.Num_Layers):
+                torch.nn.init.uniform_( self.Layers[i].weight, -a, a);
+                torch.nn.init.zeros_(   self.Layers[i].bias);
 
 
 
