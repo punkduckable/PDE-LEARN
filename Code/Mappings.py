@@ -2,6 +2,33 @@ import numpy;
 
 
 
+def x_Derivatives_to_Index(Num_x_Derivatives : int) -> int:
+    """ This function which index value (in a multi-index) is associated with
+    a particular number of derivatives of U. You should only call this function
+    if U is a function of ONE spatial variable.
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    Num_x_Derivatives: The number of x derivatives in the spatial partial
+    derivative of interest. U itself corresponds to zero spatial partial
+    derivatives.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    An integer specifying which index value is associated with this particular
+    spatial partial derivative. The table below lists a partial set of outcomes:
+        0 -> 0
+        1 -> 1
+        2 -> 2
+        ...
+    """
+
+    return Num_x_Derivatives;
+
+
+
 def xy_Derivatives_to_Index(
             Num_x_Derivatives : int,
             Num_y_Derivatives : int) -> int:

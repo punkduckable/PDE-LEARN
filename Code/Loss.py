@@ -2,8 +2,10 @@ import numpy;
 import torch;
 import math;
 
-from Network import Neural_Network;
-from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, Col_Number_to_Multi_Index_Class;
+from Network  import    Neural_Network;
+from Mappings import    x_Derivatives_to_Index, xy_Derivatives_to_Index, \
+                        Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
+                        Col_Number_to_Multi_Index_Class;
 from Evaluate_Derivatives import Evaluate_Derivatives;
 
 
@@ -131,12 +133,14 @@ def Coll_Loss(
 
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
-                # First, determine how many derivatives are in the jth term.
-                Num_Deriv = Index_to_Derivatives(Multi_Index[j]);
+                # First, identify the jth sub-index. This value tells us which
+                # entry of Dx_U holds the derivative corresponding to this
+                # sub-index.
+                Col : int = Multi_Index[j];
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, (Dx_U[Num_Deriv][:, 0]).reshape(-1));
+                ith_Lib_Term = torch.mul(ith_Lib_Term, Dx_U[Col]);
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
@@ -179,15 +183,14 @@ def Coll_Loss(
 
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
-                # First, determine how many derivatives are in the jth term.
-                Num_xy_Derivs     = Index_to_Derivatives(Multi_Index[j]);
-                Num_x_Deriv : int = Num_xy_Derivs[0];
-                Num_y_Deriv : int = Num_xy_Derivs[1];
-                Num_Deriv   : int = Num_x_Deriv + Num_y_Deriv;
+                # First, identify the jth sub-index. This value tells us which
+                # entry of Dxy_U holds the derivative corresponding to this
+                # sub-index.
+                Col : int = Multi_Index[j];
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, (Dxy_U[Num_Deriv][:, Num_y_Deriv]).reshape(-1));
+                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxy_U[Col]);
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
