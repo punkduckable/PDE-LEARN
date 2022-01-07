@@ -57,10 +57,10 @@ class Loss_Test(unittest.TestCase):
                                     Coords = Coll_Points);
 
         # Evaluate Library_Xi product!
-        #                     U                D_{x}U           D_{xx}U
-        Library_Xi_Product = (Dxy_U[0][:, 0] + Dxy_U[1][:, 0] + Dxy_U[2][:, 0] +
-                              Dxy_U[3][:, 0] + Dxy_U[4][:, 0] + torch.ones_like(Dt_U));
-        #                     D_{xxx}U          D_{xxxx}U       1
+        #                     U          D_{x}U     D_{xx}U
+        Library_Xi_Product = (Dxy_U[0] + Dxy_U[1] + Dxy_U[2] +
+                              Dxy_U[3] + Dxy_U[4] + torch.ones_like(Dt_U));
+        #                     D_{xxx}U   D_{xxxx}U  1
 
         # Now evaluate the mean square difference between Dt_U and the
         # Library_Xi_Product.
@@ -117,10 +117,10 @@ class Loss_Test(unittest.TestCase):
                                     Coords = Coll_Points);
 
         # Evaluate Library_Xi product!
-        #                     U                D_{x}U           D_{xx}}U
-        Library_Xi_Product = (Dxy_U[0][:, 0] + Dxy_U[1][:, 0] + Dxy_U[1][:, 1] +
-                              Dxy_U[2][:, 0] + Dxy_U[2][:, 1] + Dxy_U[2][:, 2] + torch.ones_like(Dt_U));
-        #                     D_{xx}U          D_{xy}U          D_{yy}U         1
+        #                     U          D_{x}U     D_{y}U
+        Library_Xi_Product = (Dxy_U[0] + Dxy_U[1] + Dxy_U[2] +
+                              Dxy_U[3] + Dxy_U[4] + Dxy_U[5] + torch.ones_like(Dt_U));
+        #                     D_{xx}U    D_{xy}U    D_{yy}U    1
 
         # Now evaluate the mean square difference between Dt_U and the
         # Library_Xi_Product.
