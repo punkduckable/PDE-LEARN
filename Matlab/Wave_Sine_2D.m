@@ -1,4 +1,4 @@
-% Consider the function (t, x, y) -> sin(t - x) + sin(t - y)
+% Consider the function (t,x,y) -> exp(t-x) + sin(t-x) + sin(t-y) + exp(t-y)
 % Some quick calculations reveal that this function satisifies the 
 % 2D wave equation:
 %           u_{tt} = u_{xx} + u_{yy}
@@ -21,7 +21,7 @@ txy_domain  = [t_l, t_h, x_l, x_h, y_l, y_h];
 
 
 % Define the function as a chebfun3 
-u_cheb = chebfun3(@(t, x, y) sin(t - x) + sin(t - y), txy_domain, 'vectorize');
+u_cheb = chebfun3(@(t, x, y) sin(t - x) + exp(t - x) + sin(t - y) + exp(t - y), txy_domain, 'vectorize');
 
 
 % Now, make a grid of x, y, and t points at which to sample the function.
