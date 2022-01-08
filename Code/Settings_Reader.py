@@ -261,13 +261,16 @@ def Settings_Reader() -> Settings_Container:
 
 
     ############################################################################
-    # Library settings.
+    # PDE settings.
+
+    # The order of the time derivative on the left-hand side of the PDE.
+    Settings.Time_Derivative_Order = int(Read_Setting(File, "Time Derivative Order [int]:"));
 
     # Highest order derivatives of U we want the library terms to be a function of.
-    Settings.Highest_Order_Derivatives =  int(Read_Setting(File, "Highest order derivative of U [int]:"));
+    Settings.Highest_Order_Spatial_Derivatives =  int(Read_Setting(File, "Highest order spatial derivative of U [int]:"));
 
     # Maximum polynomial degree of the polynomial terms.
-    Settings.Maximum_Term_Degree =  int(Read_Setting(File, "Maximum Polynomial Term Degree [int]:"));
+    Settings.Maximum_Term_Degree = int(Read_Setting(File, "Maximum Polynomial Term Degree [int]:"));
 
 
 

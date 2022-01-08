@@ -10,18 +10,19 @@ from Mappings import    Col_Number_to_Multi_Index_Class, \
 
 
 def Training(
-        U                           : Neural_Network,
-        Xi                          : torch.Tensor,
-        Coll_Points                 : torch.Tensor,
-        Data_Points                 : torch.Tensor,
-        Data_Values                 : torch.Tensor,
-        Highest_Order_Derivatives   : int,
+        U                                   : Neural_Network,
+        Xi                                  : torch.Tensor,
+        Coll_Points                         : torch.Tensor,
+        Data_Points                         : torch.Tensor,
+        Data_Values                         : torch.Tensor,
+        Time_Derivative_Order               : int,
+        Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
-        Col_Number_to_Multi_Index   : Col_Number_to_Multi_Index_Class,
-        p                           : float,
-        Lambda                      : float,
-        Optimizer                   : torch.optim.Optimizer,
-        Device                      : torch.device = torch.device('cpu')) -> None:
+        Col_Number_to_Multi_Index           : Col_Number_to_Multi_Index_Class,
+        p                                   : float,
+        Lambda                              : float,
+        Optimizer                           : torch.optim.Optimizer,
+        Device                              : torch.device = torch.device('cpu')) -> None:
     """ This function runs one epoch of training. We enforce the learned PDE
     (library-Xi product) at the Coll_Points. We also make U match the
     Data_Values at the Data_Points.
@@ -48,8 +49,11 @@ def Training(
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
-    Highest_Order_Derivatives: The highest order spatial partial derivatives of
-    U that are present in the library terms.
+    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
+    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+
+    Highest_Order_Spatial_Derivatives: The highest order spatial partial
+    derivatives of U that are present in the library terms.
 
     Index_to_Derivatives: A mapping which sends sub-index values to spatial
     partial derivatives. This is needed to build the library in Coll_Loss.
@@ -84,13 +88,14 @@ def Training(
 
         # Evaluate the Loss
         Loss = (Coll_Loss(
-                    U                           = U,
-                    Xi                          = Xi,
-                    Coll_Points                 = Coll_Points,
-                    Highest_Order_Derivatives   = Highest_Order_Derivatives,
-                    Index_to_Derivatives        = Index_to_Derivatives,
-                    Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
-                    Device                      = Device)
+                    U                                   = U,
+                    Xi                                  = Xi,
+                    Coll_Points                         = Coll_Points,
+                    Time_Derivative_Order               = Time_Derivative_Order,
+                    Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                    Index_to_Derivatives                = Index_to_Derivatives,
+                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                    Device                              = Device)
 
                 +
 
@@ -117,17 +122,18 @@ def Training(
 
 
 def Testing(
-        U                           : Neural_Network,
-        Xi                          :  Neural_Network,
-        Coll_Points                 : torch.Tensor,
-        Data_Points                 : torch.Tensor,
-        Data_Values                 : torch.Tensor,
-        Highest_Order_Derivatives   : int,
+        U                                   : Neural_Network,
+        Xi                                  :  Neural_Network,
+        Coll_Points                         : torch.Tensor,
+        Data_Points                         : torch.Tensor,
+        Data_Values                         : torch.Tensor,
+        Time_Derivative_Order               : int,
+        Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
-        Col_Number_to_Multi_Index   : Col_Number_to_Multi_Index_Class,
-        p                           : float,
-        Lambda                      : float,
-        Device                      : torch.device = torch.device('cpu')) -> Tuple[float, float]:
+        Col_Number_to_Multi_Index           : Col_Number_to_Multi_Index_Class,
+        p                                   : float,
+        Lambda                              : float,
+        Device                              : torch.device = torch.device('cpu')) -> Tuple[float, float]:
     """ This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
@@ -156,8 +162,11 @@ def Testing(
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
-    Highest_Order_Derivatives: The highest order spatial partial derivatives of
-    U that are present in the library terms.
+    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
+    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+
+    Highest_Order_Spatial_Derivatives: The highest order spatial partial
+    derivatives of U that are present in the library terms.
 
     Index_to_Derivatives: A mapping which sends sub-index values to spatial
     partial derivatives. This is needed to build the library in Coll_Loss.
@@ -189,13 +198,14 @@ def Testing(
             Data_Values = Data_Values).item();
 
     Coll_Loss_Value : float = Coll_Loss(
-            U                           = U,
-            Xi                          = Xi,
-            Coll_Points                 = Coll_Points,
-            Highest_Order_Derivatives   = Highest_Order_Derivatives,
-            Index_to_Derivatives        = Index_to_Derivatives,
-            Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
-            Device                      = Device).item();
+            U                                   = U,
+            Xi                                  = Xi,
+            Coll_Points                         = Coll_Points,
+            Time_Derivative_Order               = Time_Derivative_Order,
+            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+            Index_to_Derivatives                = Index_to_Derivatives,
+            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+            Device                              = Device).item();
 
     Lambda_Lp_Loss_Value : float = Lambda*Lp_Loss(
             Xi    = Xi,

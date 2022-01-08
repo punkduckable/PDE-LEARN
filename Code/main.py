@@ -37,9 +37,9 @@ def main():
     # going forward.
     Num_Sub_Index_Values : int = 0;
     if(Settings.Num_Spatial_Dimensions == 1):
-        Num_Sub_Index_Values = Num_Sub_Index_Values_1D(Settings.Highest_Order_Derivatives);
+        Num_Sub_Index_Values = Num_Sub_Index_Values_1D(Settings.Highest_Order_Spatial_Derivatives);
     if(Settings.Num_Spatial_Dimensions == 2):
-        Num_Sub_Index_Values = Num_Sub_Index_Values_2D(Settings.Highest_Order_Derivatives);
+        Num_Sub_Index_Values = Num_Sub_Index_Values_2D(Settings.Highest_Order_Spatial_Derivatives);
 
 
     # Now, determine how many library terms we have. This will determine the
@@ -144,7 +144,7 @@ def main():
         Index_to_Derivatives = Index_to_x_Derivatives;
     if(Settings.Num_Spatial_Dimensions == 2):
         Index_to_Derivatives = Index_to_xy_Derivatives_Class(
-                                        Highest_Order_Derivatives   = Settings.Highest_Order_Derivatives);
+                                        Highest_Order_Derivatives   = Settings.Highest_Order_Spatial_Derivatives);
 
     # Setup is now complete. Report time.
     print("Done! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
@@ -164,18 +164,19 @@ def main():
                         Device      = Settings.Device);
 
         # Now run a Training Epoch.
-        Training(   U                           = U,
-                    Xi                          = Xi,
-                    Coll_Points                 = Train_Coll_Points,
-                    Data_Points                 = Data_Container.Train_Points,
-                    Data_Values                 = Data_Container.Train_Data,
-                    Highest_Order_Derivatives   = Settings.Highest_Order_Derivatives,
-                    Index_to_Derivatives        = Index_to_Derivatives,
-                    Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
-                    p                           = Settings.p,
-                    Lambda                      = Settings.Lambda,
-                    Optimizer                   = Optimizer,
-                    Device                      = Settings.Device);
+        Training(   U                                   = U,
+                    Xi                                  = Xi,
+                    Coll_Points                         = Train_Coll_Points,
+                    Data_Points                         = Data_Container.Train_Points,
+                    Data_Values                         = Data_Container.Train_Data,
+                    Time_Derivative_Order               = Settings.Time_Derivative_Order,
+                    Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
+                    Index_to_Derivatives                = Index_to_Derivatives,
+                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                    p                                   = Settings.p,
+                    Lambda                              = Settings.Lambda,
+                    Optimizer                           = Optimizer,
+                    Device                              = Settings.Device);
 
         # Test the code (and print the loss) every 10 Epochs. For all other
         # epochs, print the Epoch to indicate the program is making progress.
@@ -188,31 +189,33 @@ def main():
 
             # Evaluate losses on training points.
             (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss) = Testing(
-                U                           = U,
-                Xi                          = Xi,
-                Coll_Points                 = Train_Coll_Points,
-                Data_Points                 = Data_Container.Train_Points,
-                Data_Values                 = Data_Container.Train_Data,
-                Highest_Order_Derivatives   = Settings.Highest_Order_Derivatives,
-                Index_to_Derivatives        = Index_to_Derivatives,
-                Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
-                p                           = Settings.p,
-                Lambda                      = Settings.Lambda,
-                Device                      = Settings.Device);
+                U                                   = U,
+                Xi                                  = Xi,
+                Coll_Points                         = Train_Coll_Points,
+                Data_Points                         = Data_Container.Train_Points,
+                Data_Values                         = Data_Container.Train_Data,
+                Time_Derivative_Order               = Settings.Time_Derivative_Order,
+                Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
+                Index_to_Derivatives                = Index_to_Derivatives,
+                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                p                                   = Settings.p,
+                Lambda                              = Settings.Lambda,
+                Device                              = Settings.Device);
 
             # Evaluate losses on the testing points.
             (Test_Data_Loss, Test_Coll_Loss, Test_Lp_Loss) = Testing(
-                U                           = U,
-                Xi                          = Xi,
-                Coll_Points                 = Test_Coll_Points,
-                Data_Points                 = Data_Container.Test_Points,
-                Data_Values                 = Data_Container.Test_Data,
-                Highest_Order_Derivatives   = Settings.Highest_Order_Derivatives,
-                Index_to_Derivatives        = Index_to_Derivatives,
-                Col_Number_to_Multi_Index   = Col_Number_to_Multi_Index,
-                p                           = Settings.p,
-                Lambda                      = Settings.Lambda,
-                Device                      = Settings.Device);
+                U                                   = U,
+                Xi                                  = Xi,
+                Coll_Points                         = Test_Coll_Points,
+                Data_Points                         = Data_Container.Test_Points,
+                Data_Values                         = Data_Container.Test_Data,
+                Time_Derivative_Order               = Settings.Time_Derivative_Order,
+                Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
+                Index_to_Derivatives                = Index_to_Derivatives,
+                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                p                                   = Settings.p,
+                Lambda                              = Settings.Lambda,
+                Device                              = Settings.Device);
 
             # Print losses!
             print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
@@ -246,6 +249,7 @@ def main():
     # Report final PDE
 
     Print_PDE(  Xi                        = Pruned_Xi,
+                Time_Derivative_Order     = Settings.Time_Derivative_Order,
                 Num_Spatial_Dimensions    = Settings.Num_Spatial_Dimensions,
                 Index_to_Derivatives      = Index_to_Derivatives,
                 Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
