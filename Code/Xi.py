@@ -93,10 +93,11 @@ def Prune_Xi_L2(    Xi                          : torch.Tensor,
 
 
 
-def Print_PDE(Xi                     : torch.Tensor,
-              Num_Spatial_Dimensions : int,
-              Index_to_Derivatives,
-              Col_Number_to_Multi_Index):
+def Print_PDE(  Xi                     : torch.Tensor,
+                Time_Derivative_Order  : int,
+                Num_Spatial_Dimensions : int,
+                Index_to_Derivatives,
+                Col_Number_to_Multi_Index):
     """  This function prints out the PDE encoded in Xi. Suppose that Xi has
     N + 1 components. Then Xi[0] - Xi[N - 1] correspond to PDE library terms,
     while Xi[N] correponds to a constant. Given some k in {0,1,... ,N-1} we
@@ -109,6 +110,9 @@ def Print_PDE(Xi                     : torch.Tensor,
 
     Xi: The Xi tensor. If there are N library terms (Col_Number_to_Multi_Index.
     Total_Indices = N), then this should be an N+1 component tensor.
+
+    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
+    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
 
     Num_Spatial_Dimensions: The number of spatial dimensions in the underlying
     data set. We need this to construct the library terms.
@@ -125,7 +129,11 @@ def Print_PDE(Xi                     : torch.Tensor,
 
     Nothing :D """
 
-    print("D_t U = ");
+    if(Time_Derivative_Order == 1):
+        print("D_t U = " % Time_Derivative_Order);
+    else:
+        print("D_t^%u U = " % Time_Derivative_Order);
+
 
     N : int = Xi.numel();
     for k in range(0, N - 1):

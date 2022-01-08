@@ -8,10 +8,11 @@ from Mappings   import  x_Derivatives_to_Index, xy_Derivatives_to_Index, \
 
 
 def Evaluate_Derivatives(
-        U                         : Neural_Network,
-        Highest_Order_Derivatives : int,
-        Coords                    : torch.Tensor,
-        Device                    : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        U                                   : Neural_Network,
+        Time_Derivative_Order               : int,
+        Highest_Order_Spatial_Derivatives   : int,
+        Coords                              : torch.Tensor,
+        Device                              : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, List[torch.Tensor]]:
     """ This function evaluates U, its first time derivative, and some of its
     spatial partial derivatives, at each coordinate in Coords.
 
@@ -23,8 +24,10 @@ def Evaluate_Derivatives(
 
     U: The network we're differentiating.
 
-    Highest_Order_Derivatives: The highest order spatial partial derivatives of
-    U that we need to evaluate.
+    Time_Derivative_Order: The order of the desired time derivative.
+
+    Highest_Order_Spatial_Derivatives: The highest order spatial partial
+    derivatives of U that we need to evaluate.
 
     Coords: A two (1 spatial variable) or three (2 spatial variables) column
     Tensor whose ith row holds the t, x (1 spatial variable) or t, x, y (2
@@ -38,7 +41,7 @@ def Evaluate_Derivatives(
 
     This returns a two-element Tuple! If Coords has M rows, then the first
     return argument is an M element Tensor whose ith element holds the value of
-    D_{t} U at the ith coordinate.
+    D_{t}^{n} U at the ith coordinate, where n = Time_Derivative_Order.
 
     The second is a List of tensors, whose jth element is the spatial partial
     derivative of U associated with the sub index value j, evaluated at the
@@ -55,16 +58,16 @@ def Evaluate_Derivatives(
     # We have to handle the 1, 2 spatial dimension cases separatly.
     if(Num_Spatial_Dimensions == 1):
         # First, set up the return variables. We know that each spatial partial
-        # derivative of U is associated with a sub-index value. Dx_U is a list
+        # derivative of U is associated with a sub-index value. Dxn_U is a list
         # whose jth entry holds the spatial partial derivative of U associated
         # with sub index value j evaluated at the coordinates
         Num_Coords      : int   = Coords.shape[0];
-        Num_Sub_Indices : int   = Num_Sub_Index_Values_1D(Highest_Order_Derivatives);
-        Dx_U                   = [None]*Num_Sub_Indices;
+        Num_Sub_Indices : int   = Num_Sub_Index_Values_1D(Highest_Order_Spatial_Derivatives);
+        Dxn_U                   = [None]*Num_Sub_Indices;
 
-        # Populate the appropiate entry of Dx_U with U evaluated at the coords.
+        # Populate the appropiate entry of Dxn_U with U evaluated at the coords.
         Col : int   = x_Derivatives_to_Index(0);
-        Dx_U[Col]  = U(Coords).view(-1);
+        Dxn_U[Col]  = U(Coords).view(-1);
 
         # Differentiate U with respect to t, x at each coordinate. To speed up
         # computations, we do this for all coordinates at once. It's important,
@@ -93,22 +96,41 @@ def Evaluate_Derivatives(
         # The end result is a 2 column Tensor whose (i, 0) entry holds
         # (d/dt_i)U(t_i, x_i), and whose (i, 1) entry holds (d/dx_i)U(t_i, x_i).
         Grad_U = torch.autograd.grad(
-                    outputs         = Dx_U[Col],
+                    outputs         = Dxn_U[Col],
                     inputs          = Coords,
-                    grad_outputs    = torch.ones_like(Dx_U[Col]),
+                    grad_outputs    = torch.ones_like(Dxn_U[Col]),
                     retain_graph    = True,
                     create_graph    = True)[0];
 
         # extract D_{t} U and D_{x} U at each coordinate.
-        Dt_U        = Grad_U[:, 0].view(-1);
+        Dtn_U       = Grad_U[:, 0].view(-1);
         Col : int   = x_Derivatives_to_Index(1);
-        Dx_U[Col]  = Grad_U[:, 1].view(-1);
+        Dxn_U[Col]  = Grad_U[:, 1].view(-1);
 
-        # Compute higher order derivatives
-        for i in range(2, Highest_Order_Derivatives + 1):
+        # Compute the requested time derivative of U.
+        for i in range(2, Time_Derivative_Order + 1):
+            # At each coordinate, differentiate D_{t}^{i - 1} U with respect to
+            # to t, x. This uses the same process we used for Grad_U (described
+            # above), but with D_{t}^{i - 1} U in place of U. We need to create
+            # graphs for this so that torch can track this operation when
+            # constructing the computational graph for the loss function (which
+            # it will use in backpropagation). We also need to retain Grad_U's
+            # graph for back-propagation.
+            Grad_Dt_U = torch.autograd.grad(
+                            outputs         = Dtn_U,
+                            inputs          = Coords,
+                            grad_outputs    = torch.ones_like(Dtn_U),
+                            retain_graph    = True,
+                            create_graph    = True)[0];
+
+            # The 0 column should contain the ith time derivative of U.
+            Dtn_U = Grad_Dt_U[:, 0].view(-1);
+
+        # Compute higher order spatial partial derivatives
+        for i in range(2, Highest_Order_Spatial_Derivatives + 1):
             # At each coordinate, differentiate D_{x}^{i - 1} U with respect to
-            # to t, x. This uses the same process as is described above for
-            # Grad_U, but with D_x^{i - 1} U in place of U. We need to create
+            # to t, x. This uses the same process we used for Grad_U (described
+            # above), but with D_{x}^{i - 1} U in place of U. We need to create
             # graphs for this so that torch can track this operation when
             # constructing the computational graph for the loss function (which
             # it will use in backpropagation). We also need to retain Grad_U's
@@ -117,29 +139,29 @@ def Evaluate_Derivatives(
             Col      : int  = x_Derivatives_to_Index(i);
 
             Grad_Dx_im1_U = torch.autograd.grad(
-                            outputs         = Dx_U[Col_im1],
+                            outputs         = Dxn_U[Col_im1],
                             inputs          = Coords,
-                            grad_outputs    = torch.ones_like(Dx_U[Col_im1]),
+                            grad_outputs    = torch.ones_like(Dxn_U[Col_im1]),
                             retain_graph    = True,
                             create_graph    = True)[0];
 
             # Extract D_{x}^{i} U, which is the 1 column of the above Tensor.
-            Dx_U[Col] = Grad_Dx_im1_U[:, 1].view(-1);
+            Dxn_U[Col] = Grad_Dx_im1_U[:, 1].view(-1);
 
-        return (Dt_U, Dx_U);
+        return (Dtn_U, Dxn_U);
 
     elif(Num_Spatial_Dimensions == 2):
-        # First, set up the return variables. The tensor Dxy_U is a list whose
+        # First, set up the return variables. The tensor Dxyn_U is a list whose
         # kth element holds the spatial derivaives of order k of U at the
         # coordinates.
         Num_Coords      : int   = Coords.shape[0];
-        Num_Sub_Indices : int   = Num_Sub_Index_Values_2D(Highest_Order_Derivatives);
-        Dxy_U                  = [None]*Num_Sub_Indices;
+        Num_Sub_Indices : int   = Num_Sub_Index_Values_2D(Highest_Order_Spatial_Derivatives);
+        Dxyn_U                  = [None]*Num_Sub_Indices;
 
         # Evaluate U at the Coords. Note that we need to view the result as a
         # Num_Cooords by 1 tensor.
         Col : int   = xy_Derivatives_to_Index(0, 0);
-        Dxy_U[Col] = U(Coords).view(-1);
+        Dxyn_U[Col] = U(Coords).view(-1);
 
         # Differentiate U with respect to t, x, y at each coordinate. This uses
         # the same process as in the 1 spatial dimension case, except there are
@@ -148,22 +170,41 @@ def Evaluate_Derivatives(
         # D_{xi} U(t_i, x_i, y_i), and (i, 2) entry holds
         # D_{yi} U(t_i, x_i, y_i).
         Grad_U = torch.autograd.grad(
-                    outputs         = Dxy_U[Col],
+                    outputs         = Dxyn_U[Col],
                     inputs          = Coords,
-                    grad_outputs    = torch.ones_like(Dxy_U[Col]),
+                    grad_outputs    = torch.ones_like(Dxyn_U[Col]),
                     retain_graph    = True,
                     create_graph    = True)[0];
 
         # extract D_{t} U,  D_{x} U, and D_{y} U at each coordinate.
-        Dt_U            = Grad_U[:, 0].view(-1);
+        Dtn_U            = Grad_U[:, 0].view(-1);
 
         Col_x : int     = xy_Derivatives_to_Index(1, 0);
         Col_y : int     = xy_Derivatives_to_Index(0, 1);
-        Dxy_U[Col_x]   = Grad_U[:, 1].view(-1);
-        Dxy_U[Col_y]   = Grad_U[:, 2].view(-1);
+        Dxyn_U[Col_x]   = Grad_U[:, 1].view(-1);
+        Dxyn_U[Col_y]   = Grad_U[:, 2].view(-1);
 
-        # Compute higher order derivatives
-        for i in range(2, Highest_Order_Derivatives + 1):
+        # Compute the requested time derivative of U.
+        for i in range(2, Time_Derivative_Order + 1):
+            # At each coordinate, differentiate D_{t}^{i - 1} U with respect to
+            # to t, x. This uses the same process we used for Grad_U (described
+            # above), but with D_{t}^{i - 1} U in place of U. We need to create
+            # graphs for this so that torch can track this operation when
+            # constructing the computational graph for the loss function (which
+            # it will use in backpropagation). We also need to retain Grad_U's
+            # graph for back-propagation.
+            Grad_Dt_U = torch.autograd.grad(
+                            outputs         = Dtn_U,
+                            inputs          = Coords,
+                            grad_outputs    = torch.ones_like(Dtn_U),
+                            retain_graph    = True,
+                            create_graph    = True)[0];
+
+            # The 0 column should contain the ith time derivative of U.
+            Dtn_U = Grad_Dt_U[:, 0].view(-1);
+
+        # Compute higher order spatial partial derivatives
+        for i in range(2, Highest_Order_Spatial_Derivatives + 1):
             for j in range(i):
                 # To evaluate D_{x}^{i-j} D_{y}^{j} U, we differentiate
                 # D_{x}^{i-j-1} D_{y}^{j} U with respect to x. In the case when
@@ -178,22 +219,22 @@ def Evaluate_Derivatives(
                 Col_imj_j   : int = xy_Derivatives_to_Index(i - j,      j);
 
                 Grad_Dximjm1_Dyj_U = torch.autograd.grad(
-                                outputs         = Dxy_U[Col_imjm1_j],
+                                outputs         = Dxyn_U[Col_imjm1_j],
                                 inputs          = Coords,
-                                grad_outputs    = torch.ones_like(Dxy_U[Col_imjm1_j]),
+                                grad_outputs    = torch.ones_like(Dxyn_U[Col_imjm1_j]),
                                 retain_graph    = True,
                                 create_graph    = True)[0];
 
                 # Since
                 #   D_{x}^{i - j} D_{y}^{j} U = D_{x} ( D_{i - j - 1} D_{x}^j U )
                 # we want to keep the x derivative in the gradient.
-                Dxy_U[Col_imj_j] = Grad_Dximjm1_Dyj_U[:, 1].view(-1);
+                Dxyn_U[Col_imj_j] = Grad_Dximjm1_Dyj_U[:, 1].view(-1);
 
                 # If j = i - 1, then we also want to keep the y derivative in the
                 # gradient, since
                 #   D_{y}^{i} U = D_{y} ( D_{y}^{i - 1} U )
                 if(j == i - 1):
                     Col_0_i : int   = xy_Derivatives_to_Index(0, i);
-                    Dxy_U[Col_0_i]  = Grad_Dximjm1_Dyj_U[:, 2].view(-1);
+                    Dxyn_U[Col_0_i]  = Grad_Dximjm1_Dyj_U[:, 2].view(-1);
 
-        return (Dt_U, Dxy_U);
+        return (Dtn_U, Dxyn_U);

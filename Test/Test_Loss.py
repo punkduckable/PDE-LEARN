@@ -49,12 +49,13 @@ class Loss_Test(unittest.TestCase):
         #       U + D_{x}U + D_{xx}U + D_{xxx}U + D_{xxxx}U + 1
         # And thus, we expect the Coll_Loss to be the mean of the square of
         # the difference between this value and D_{t}U.
-        Highest_Order_Derivatives : int = 4;
+        Highest_Order_Spatial_Derivatives : int = 4;
         Max_Sub_Indices : int = 1;
         (Dt_U, Dxy_U)         = Evaluate_Derivatives(
-                                    U = U_Poly,
-                                    Highest_Order_Derivatives = Highest_Order_Derivatives,
-                                    Coords = Coll_Points);
+                                    U                                   = U_Poly,
+                                    Time_Derivative_Order               = 1,
+                                    Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                                    Coords                              = Coll_Points);
 
         # Evaluate Library_Xi product!
         #                     U          D_{x}U     D_{xx}U
@@ -79,12 +80,13 @@ class Loss_Test(unittest.TestCase):
                                         Max_Sub_Indices      = Max_Sub_Indices,
                                         Num_Sub_Index_Values = Num_Sub_Index_Values);
 
-        Coll_Loss_Actual = Coll_Loss(   U           = U_Poly,
-                                        Xi          = Xi,
-                                        Coll_Points = Coll_Points,
-                                        Highest_Order_Derivatives = Highest_Order_Derivatives,
-                                        Index_to_Derivatives      = Index_to_x_Derivatives,
-                                        Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
+        Coll_Loss_Actual = Coll_Loss(   U                                   = U_Poly,
+                                        Xi                                  = Xi,
+                                        Coll_Points                         = Coll_Points,
+                                        Time_Derivative_Order               = 1,
+                                        Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                                        Index_to_Derivatives                = Index_to_x_Derivatives,
+                                        Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index);
         # Check that it worked!
         self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
 
@@ -109,12 +111,13 @@ class Loss_Test(unittest.TestCase):
         #       U + D_{x}U + D_{y}U + D_{xx}U + D_{xy}U + D_{yy}U + 1
         # And thus, we expect the Coll_Loss to be the mean of the square of
         # the difference between this value and D_{t}U.
-        Highest_Order_Derivatives : int = 2;
+        Highest_Order_Spatial_Derivatives : int = 2;
         Max_Sub_Indices : int = 1;
         (Dt_U, Dxy_U)         = Evaluate_Derivatives(
-                                    U = U_Poly,
-                                    Highest_Order_Derivatives = Highest_Order_Derivatives,
-                                    Coords = Coll_Points);
+                                    U                                   = U_Poly,
+                                    Time_Derivative_Order               = 1,
+                                    Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                                    Coords                              = Coll_Points);
 
         # Evaluate Library_Xi product!
         #                     U          D_{x}U     D_{y}U
@@ -135,19 +138,20 @@ class Loss_Test(unittest.TestCase):
         Xi = torch.ones(7, dtype = torch.float32);
 
         Index_to_xy_Derivatives = Index_to_xy_Derivatives_Class(
-                                        Highest_Order_Derivatives = Highest_Order_Derivatives);
+                                        Highest_Order_Derivatives = Highest_Order_Spatial_Derivatives);
 
         Num_Sub_Index_Values = Index_to_xy_Derivatives.Num_Index_Values;
         Col_Number_to_Multi_Index = Col_Number_to_Multi_Index_Class(
                                         Max_Sub_Indices      = Max_Sub_Indices,
                                         Num_Sub_Index_Values = Num_Sub_Index_Values);
 
-        Coll_Loss_Actual = Coll_Loss(   U           = U_Poly,
-                                        Xi          = Xi,
-                                        Coll_Points = Coll_Points,
-                                        Highest_Order_Derivatives = Highest_Order_Derivatives,
-                                        Index_to_Derivatives      = Index_to_xy_Derivatives,
-                                        Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
+        Coll_Loss_Actual = Coll_Loss(   U                                   = U_Poly,
+                                        Xi                                  = Xi,
+                                        Coll_Points                         = Coll_Points,
+                                        Time_Derivative_Order               = 1,
+                                        Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                                        Index_to_Derivatives                = Index_to_xy_Derivatives,
+                                        Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index);
         # Check that it worked!
         self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
 

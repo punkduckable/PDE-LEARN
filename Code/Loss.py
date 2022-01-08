@@ -52,13 +52,14 @@ def Data_Loss(
 
 
 def Coll_Loss(
-        U                           : Neural_Network,
-        Xi                          : torch.Tensor,
-        Coll_Points                 : torch.Tensor,
-        Highest_Order_Derivatives   : int,
+        U                                   : Neural_Network,
+        Xi                                  : torch.Tensor,
+        Coll_Points                         : torch.Tensor,
+        Time_Derivative_Order               : int,
+        Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
         Col_Number_to_Multi_Index,
-        Device                      : torch.device = torch.device('cpu')) -> torch.Tensor:
+        Device                              : torch.device = torch.device('cpu')) -> torch.Tensor:
     """ Let L(U) denote the library matrix (i,j entry is the jth library term
     evaluated at the ith collocation point. Note that we define the last library
     term as the constant function 1). Further, let b(U) denote the vector whose
@@ -81,9 +82,12 @@ def Coll_Loss(
     = 2, then the ith row of this tensor holds the (t, x, y) coordiante of the
     ith collocation point.
 
-    Highest_Order_Derivatives: The highest order derivatives in our library
-    terms. We need to know this to evaluate the spatial partial derivatives
-    of Xi and, subsequently, evaluate the library terms.
+    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
+    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+
+    Highest_Order_Spatial_Derivatives: The highest order derivatives in our
+    library terms. We need to know this to evaluate the spatial partial
+    derivatives of Xi and, subsequently, evaluate the library terms.
 
     Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps
     sub-index value to a number of x derivatives. If Num_Spatial_Dimensions = 2,
@@ -108,17 +112,18 @@ def Coll_Loss(
     # This code behaves differently for 1 and 2 spatial variables.
     if(Num_Spatial_Dimensions == 1):
         # First, acquire the spatial and time derivatives of U.
-        (Dt_U, Dx_U) = Evaluate_Derivatives(
-                            U                         = U,
-                            Highest_Order_Derivatives = Highest_Order_Derivatives,
-                            Coords                    = Coll_Points,
-                            Device                    = Device);
+        (Dtn_U, Dxn_U) = Evaluate_Derivatives(
+                            U                                   = U,
+                            Time_Derivative_Order               = Time_Derivative_Order,
+                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                            Coords                              = Coll_Points,
+                            Device                              = Device);
 
-        # Construct our approximation to Dt_U. To do this, we cycle through
+        # Construct our approximation to Dtn_U. To do this, we cycle through
         # the columns of the library. At each column, we construct the term
         # and then multiply it by the corresponding component of Xi. We then add
         # the result to a running total.
-        Library_Xi_Product = torch.zeros_like(Dt_U);
+        Library_Xi_Product = torch.zeros_like(Dtn_U);
 
         # First, determine the number of columns.
         Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
@@ -129,47 +134,48 @@ def Coll_Loss(
 
             # Initialize an array for ith library term. Since we construct this
             # via multiplication, this needs to initialized to a tensor of 1's.
-            ith_Lib_Term = torch.ones_like(Dt_U);
+            ith_Lib_Term = torch.ones_like(Dtn_U);
 
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
                 # First, identify the jth sub-index. This value tells us which
-                # entry of Dx_U holds the derivative corresponding to this
+                # entry of Dxn_U holds the derivative corresponding to this
                 # sub-index.
                 Col : int = Multi_Index[j];
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, Dx_U[Col]);
+                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxn_U[Col]);
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
             Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
 
         # Finally, add on the constant term (the final component of Xi!)
-        Ones_Col = torch.ones_like(Dt_U);
+        Ones_Col = torch.ones_like(Dtn_U);
         Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
-        # Now, compute the pointwise square error between Dt_U and the
+        # Now, compute the pointwise square error between Dtn_U and the
         # Library_Xi_Product.
-        Square_Error = ( Dt_U - Library_Xi_Product )**2;
+        Square_Error = ( Dtn_U - Library_Xi_Product )**2;
 
         # Return the mean square error.
         return Square_Error.mean();
 
-    else: # Num Spatial dimensions == 2.
+    elif(Num_Spatial_Dimensions == 2):
         # First, acquire the spatial and time derivatives of U.
-        (Dt_U, Dxy_U) = Evaluate_Derivatives(
-                            U      = U,
-                            Highest_Order_Derivatives = Highest_Order_Derivatives,
-                            Coords = Coll_Points,
-                            Device = Device);
+        (Dtn_U, Dxyn_U) = Evaluate_Derivatives(
+                            U                                   = U,
+                            Time_Derivative_Order               = Time_Derivative_Order,
+                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                            Coords                              = Coll_Points,
+                            Device                              = Device);
 
-        # Construct our approximation to Dt_U. To do this, we cycle through
+        # Construct our approximation to Dtn_U. To do this, we cycle through
         # the columns of the library. At each column, we construct the term
         # and then multiply it by the corresponding component of Xi. We then add
         # the result to a running total.
-        Library_Xi_Product = torch.zeros_like(Dt_U);
+        Library_Xi_Product = torch.zeros_like(Dtn_U);
 
         Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
         for i in range(Total_Indices):
@@ -179,30 +185,30 @@ def Coll_Loss(
 
             # Initialize an array for ith library term. Since we construct this
             # via multiplication, this needs to initialized to a tensor of 1's.
-            ith_Lib_Term = torch.ones_like(Dt_U);
+            ith_Lib_Term = torch.ones_like(Dtn_U);
 
             # Now, cycle through the indices in this multi-index.
             for j in range(Num_Sub_Indices):
                 # First, identify the jth sub-index. This value tells us which
-                # entry of Dxy_U holds the derivative corresponding to this
+                # entry of Dxyn_U holds the derivative corresponding to this
                 # sub-index.
                 Col : int = Multi_Index[j];
 
                 # Now multiply the ith library term by the corresponding
                 # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxy_U[Col]);
+                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxyn_U[Col]);
 
             # Multiply the ith_Lib_Term by the ith component of Xi and add the
             # result to the Library_Xi product.
             Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
 
         # Finally, add on the constant term (the final component of Xi!)
-        Ones_Col = torch.ones_like(Dt_U);
+        Ones_Col = torch.ones_like(Dtn_U);
         Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
-        # Now, compute the pointwise square error between Dt_U and the
+        # Now, compute the pointwise square error between Dtn_U and the
         # Library_Xi_Product.
-        Square_Error = ( Dt_U - Library_Xi_Product )**2;
+        Square_Error = ( Dtn_U - Library_Xi_Product )**2;
 
         # Return the mean square error.
         return Square_Error.mean();

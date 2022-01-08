@@ -5,30 +5,32 @@
 Load U From Save [bool]:                         True
 Load Xi From Save [bool]:                        True
 Load Optimizer From Save [bool]:                 False
-    Load File Name [str]:                        KS_Sine_SIREN_Adam_10_Layer
+    Load File Name [str]:                        Wave_Sine_2D_LBFGS_0
 
 # Save settings
 Save State [bool]:                               True
-    Save File Name [str]:                        KS_Sine_SIREN_LBFGS_10_Layer
+    Save File Name [str]:                        Wave_Sine_2D_LBFGS_0
 
 
 
 ################################################################################
-# Library settings.
+# PDE settings.
 
-# Library Term Settings
-Highest order derivative of U [int]:             4
+# Order of the time derivative on the PDE's left-hand side
+Time Derivative Order [int]:                     2
+
+# Library function Settings
+Highest order spatial derivative of U [int]:     2
 Maximum Polynomial Term Degree [int]:            2
-
 
 
 ################################################################################
 # Network settings.
 
 # U network.
-Number of Hidden Layers [int]:                   10
+Number of Hidden Layers [int]:                   5
 Hidden Units per Hidden Layer [int]:             50
-Activation Function [Tanh, Rational, Sin]:       Sin
+Activation Function [Tanh, Rational, Sin]:       Rational
 
 # Device settings.
 Train on CPU or GPU [GPU, CPU]:                  cpu
@@ -39,7 +41,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Lambda [float]:                                  .0000
+Lambda [float]:                                  .0002
 
 Number of Training Data Points [int]:            10000
 Number of Testing Data Points [int]:             1000
@@ -61,13 +63,13 @@ Threshold [float]:                               .001
 
 Optimizer [Adam, LBFGS]:                         LBFGS
 Learning Rate [float]:                           .1
-Number of Epochs [int]:                          100
+Number of Epochs [int]:                          50
 
 
 
 ################################################################################
 # Data settings.
 
-Data File [str]:                                 KS.mat
-Number of Spatial dimensions [int]:              1
+Data File [str]:                                 Wave_Sine_2D.mat
+Number of Spatial dimensions [int]:              2
 Noise Level [float]:                             0.0
