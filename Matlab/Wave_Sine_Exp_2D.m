@@ -21,7 +21,7 @@ txy_domain  = [t_l, t_h, x_l, x_h, y_l, y_h];
 
 
 % Define the function as a chebfun3 
-u_cheb = chebfun3(@(t, x, y) sin(t - x) + exp(.05*(t - x - y)) + sin(t - y) + exp(t - y), txy_domain, 'vectorize');
+u_cheb = chebfun3(@(t, x, y) sin(t - x) + exp(.05*(t - x - y)) + sin(t - y), txy_domain, 'vectorize');
 
 
 % Now, make a grid of x, y, and t points at which to sample the function.
