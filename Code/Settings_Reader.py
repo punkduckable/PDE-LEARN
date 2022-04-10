@@ -321,8 +321,6 @@ def Settings_Reader() -> Settings_Container:
 
 
     # Read number of testing/training data/collocation points
-    Settings.Num_Train_Data_Points = int(Read_Setting(File, "Number of Training Data Points [int]:"));
-    Settings.Num_Test_Data_Points  = int(Read_Setting(File, "Number of Testing Data Points [int]:"));
     Settings.Num_Train_Coll_Points = int(Read_Setting(File, "Number of Training Collocation Points [int]:"));
     Settings.Num_Test_Coll_Points  = int(Read_Setting(File, "Number of Testing Collocation Points [int]:"));
 
@@ -357,14 +355,7 @@ def Settings_Reader() -> Settings_Container:
     # Data settings.
 
     # Data file name. Note that the data file should NOT contain noise.
-    Settings.Data_File_Name =  Read_Setting(File, "Data File [str]:");
-
-    # Read the number of spatial dimensions in the data set. This determines the
-    # number of input dimensions of U and the nature of the library terms.
-    Settings.Num_Spatial_Dimensions =  int(Read_Setting(File, "Number of Spatial dimensions [int]:"));
-
-    # Noise level. This specifies how much we should corrupt the raw data set.
-    Settings.Noise_Level =  float(Read_Setting(File, "Noise Level [float]:"));
+    Settings.DataSet_Name =  Read_Setting(File, "DataSet [str]:");
 
     # All done! Return the settings!
     File.close();

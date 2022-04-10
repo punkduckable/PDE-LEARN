@@ -1,10 +1,10 @@
 import numpy as np;
 import torch;
-from typing import Tuple;
+from typing     import Tuple;
 
-from Network import Neural_Network;
-from Loss import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
-from Mappings import    Col_Number_to_Multi_Index_Class, \
+from Network    import  Neural_Network;
+from Loss       import  Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
+from Mappings   import  Col_Number_to_Multi_Index_Class, \
                         Index_to_x_Derivatives, Index_to_xy_Derivatives_Class;
 
 
@@ -13,8 +13,8 @@ def Training(
         U                                   : Neural_Network,
         Xi                                  : torch.Tensor,
         Coll_Points                         : torch.Tensor,
-        Data_Points                         : torch.Tensor,
-        Data_Values                         : torch.Tensor,
+        Inputs                              : torch.Tensor,
+        Targets                             : torch.Tensor,
         Time_Derivative_Order               : int,
         Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
@@ -25,7 +25,7 @@ def Training(
         Device                              : torch.device = torch.device('cpu')) -> None:
     """ This function runs one epoch of training. We enforce the learned PDE
     (library-Xi product) at the Coll_Points. We also make U match the
-    Data_Values at the Data_Points.
+    Targets at the Inputs.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -39,13 +39,13 @@ def Training(
     tensor whose ith row holds the t, x_1,... x_d coordinates of the ith
     Collocation point.
 
-    Data_Points: A tensor holding the coordinates of the points at which we
+    Inputs: A tensor holding the coordinates of the points at which we
     compare the approximate solution to the true one. If U accepts d spatial
     coordinates, then this should be a d+1 column tensor whose ith row holds the
     t, x_1,... x_d coordinates of the ith Datapoint.
 
-    Data_Values: A tensor holding the value of the true solution at the data
-    points. If Data_Points has N rows, then this should be an N element tensor
+    Targets: A tensor holding the value of the true solution at the data
+    points. If Inputs has N rows, then this should be an N element tensor
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
@@ -101,8 +101,8 @@ def Training(
 
                 Data_Loss(
                     U                   = U,
-                    Data_Points         = Data_Points,
-                    Data_Values         = Data_Values)
+                    Inputs              = Inputs,
+                    Targets             = Targets)
 
                 +
 
@@ -125,8 +125,8 @@ def Testing(
         U                                   : Neural_Network,
         Xi                                  :  Neural_Network,
         Coll_Points                         : torch.Tensor,
-        Data_Points                         : torch.Tensor,
-        Data_Values                         : torch.Tensor,
+        Inputs                              : torch.Tensor,
+        Targets                             : torch.Tensor,
         Time_Derivative_Order               : int,
         Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
@@ -152,13 +152,13 @@ def Testing(
     tensor whose ith row holds the t, x_1,... x_d coordinates of the ith
     Collocation point.
 
-    Data_Points: A tensor holding the coordinates of the points at which we
+    Inputs: A tensor holding the coordinates of the points at which we
     compare the approximate solution to the true one. If u accepts d spatial
     coordinates, then this should be a d+1 column tensor whose ith row holds the
     t, x_1,... x_d coordinates of the ith Datapoint.
 
-    Data_Values: A tensor holding the value of the true solution at the data
-    points. If Data_Points has N rows, then this should be an N element tensor
+    Targets: A tensor holding the value of the true solution at the data
+    points. If Targets has N rows, then this should be an N element tensor
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
@@ -194,8 +194,8 @@ def Testing(
     # Get the losses
     Data_Loss_Value : float  = Data_Loss(
             U           = U,
-            Data_Points = Data_Points,
-            Data_Values = Data_Values).item();
+            Inputs      = Inputs,
+            Targets     = Targets).item();
 
     Coll_Loss_Value : float = Coll_Loss(
             U                                   = U,

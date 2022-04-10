@@ -22,12 +22,23 @@ def main():
     for (Setting, Value) in Settings.__dict__.items():
         print(("%-25s = " % Setting) + str(Value));
 
-    # Make sure the user only wants two spatial dimensions.
-    assert(Settings.Num_Spatial_Dimensions == 1 or Settings.Num_Spatial_Dimensions == 2)
-
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
     print("Setting up... ", end = '');
+
+
+    ############################################################################
+    # Set up Data
+    # This sets up the testing/training inputs/targets, and the input bounds.
+    # This will also tell us the number of spatial dimensions (there's a row of
+    # Input_Bounds for each coordinate component. Since one coordinate is for
+    # time, one minus the number of rows gives the number of spatial dimensions).
+
+    Data_Container = Data_Loader(   DataSet_Name = Settings.DataSet_Name,
+                                    Device       = Settings.Device);
+
+    # Get the number of input dimensions.
+    Settings.Num_Spatial_Dimensions : int = Data_Container.Input_Bounds.shape[0] - 1;
 
 
     ############################################################################
@@ -129,13 +140,6 @@ def main():
             param_group['lr'] = Settings.Learning_Rate;
 
 
-    ############################################################################
-    # Set up Data
-    # This sets up the testing/training data points and data values. This will
-    # also give us the upper and lower bounds for the domain.
-
-    Data_Container = Data_Loader(Settings);
-
 
     ############################################################################
     # Set up Index_to_Derivatives.
@@ -159,7 +163,7 @@ def main():
     for t in range(Settings.Num_Epochs):
         # First, generate new training collocation points.
         Train_Coll_Points = Generate_Points(
-                        Bounds      = Data_Container.Bounds,
+                        Bounds      = Data_Container.Input_Bounds,
                         Num_Points  = Settings.Num_Train_Coll_Points,
                         Device      = Settings.Device);
 
@@ -167,8 +171,8 @@ def main():
         Training(   U                                   = U,
                     Xi                                  = Xi,
                     Coll_Points                         = Train_Coll_Points,
-                    Data_Points                         = Data_Container.Train_Points,
-                    Data_Values                         = Data_Container.Train_Data,
+                    Inputs                              = Data_Container.Train_Inputs,
+                    Targets                             = Data_Container.Train_Targets,
                     Time_Derivative_Order               = Settings.Time_Derivative_Order,
                     Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
                     Index_to_Derivatives                = Index_to_Derivatives,
@@ -183,7 +187,7 @@ def main():
         if(t % 10 == 0 or t == Settings.Num_Epochs - 1):
             # Generate new testing Collocation Coordinates
             Test_Coll_Points = Generate_Points(
-                            Bounds      = Data_Container.Bounds,
+                            Bounds      = Data_Container.Input_Bounds,
                             Num_Points  = Settings.Num_Test_Coll_Points,
                             Device      = Settings.Device);
 
@@ -192,8 +196,8 @@ def main():
                 U                                   = U,
                 Xi                                  = Xi,
                 Coll_Points                         = Train_Coll_Points,
-                Data_Points                         = Data_Container.Train_Points,
-                Data_Values                         = Data_Container.Train_Data,
+                Inputs                              = Data_Container.Train_Inputs,
+                Targets                             = Data_Container.Train_Targets,
                 Time_Derivative_Order               = Settings.Time_Derivative_Order,
                 Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
                 Index_to_Derivatives                = Index_to_Derivatives,
@@ -207,8 +211,8 @@ def main():
                 U                                   = U,
                 Xi                                  = Xi,
                 Coll_Points                         = Test_Coll_Points,
-                Data_Points                         = Data_Container.Test_Points,
-                Data_Values                         = Data_Container.Test_Data,
+                Inputs                              = Data_Container.Test_Inputs,
+                Targets                             = Data_Container.Test_Targets,
                 Time_Derivative_Order               = Settings.Time_Derivative_Order,
                 Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
                 Index_to_Derivatives                = Index_to_Derivatives,

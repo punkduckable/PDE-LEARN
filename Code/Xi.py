@@ -130,7 +130,7 @@ def Print_PDE(  Xi                     : torch.Tensor,
     Nothing :D """
 
     if(Time_Derivative_Order == 1):
-        print("D_t U = " % Time_Derivative_Order);
+        print("D_t U = ");
     else:
         print("D_t^%u U = " % Time_Derivative_Order);
 
