@@ -1,27 +1,30 @@
 import numpy;
 import random;
 import scipy.io;
+import matplotlib.pyplot as pyplot;
 
 from Create_Data_Set import Create_Data_Set;
 
 
 
+Make_Plot : bool = True;
+
 def main():
     # Specify settings.
-    Data_File_Name      : str   = "Heat_Exp_Cos_2D";
-    Num_Dimensions      : int   = 2;
-    Noise_Proportion    : float = 0.5;
+    Data_File_Name          : str   = "Cahn_Hilliard_Sine";
+    Num_Spatial_Dimensions  : int   = 1;
+    Noise_Proportion        : float = 0.0;
 
-    Num_Train_Examples  : int   = 5000;
-    Num_Test_Examples   : int   = 1000;
+    Num_Train_Examples      : int   = 10000;
+    Num_Test_Examples       : int   = 1000;
 
     # Now pass them to "From_MATLAB".
-    if(Num_Dimensions == 1):
+    if(Num_Spatial_Dimensions == 1):
         From_MATLAB_1D( Data_File_Name      = Data_File_Name,
                         Noise_Proportion    = Noise_Proportion,
                         Num_Train_Examples  = Num_Train_Examples,
                         Num_Test_Examples   = Num_Test_Examples);
-    else: # Num_Dimensions == 2
+    else: # Num_Spatial_Dimensions == 2
         From_MATLAB_2D( Data_File_Name      = Data_File_Name,
                         Noise_Proportion    = Noise_Proportion,
                         Num_Train_Examples  = Num_Train_Examples,
@@ -87,17 +90,34 @@ def From_MATLAB_1D( Data_File_Name      : str,
     # Add noise to true solution.
     Noisy_Data_Set = Data_Set + (Noise_Proportion)*numpy.std(Data_Set)*numpy.random.randn(*Data_Set.shape);
 
-    # Generate the grid of (t, x) coordinates where we'll enforce the "true
-    # solution". Each row of these arrays corresponds to a particular position.
-    # Each column corresponds to a particular time.
-    grid_t_coords, grid_x_coords = numpy.meshgrid(t_points, x_points);
+    # Generate the grid of (t, x) coordinates. The i,j entry of usol should
+    # hold the value of the solution at the i,j coordinate.
+    t_coords_matrix, x_coords_matrix = numpy.meshgrid(t_points, x_points);
 
-    # Flatten t_coods, x_coords into column vectors.
-    flattened_grid_t_coords  = grid_t_coords.reshape(-1, 1);
-    flattened_grid_x_coords  = grid_x_coords.reshape(-1, 1);
+    if(Make_Plot == True):
+        epsilon : float = .0001;
+        Data_min : float = numpy.min(Noisy_Data_Set) - epsilon;
+        Data_max : float = numpy.max(Noisy_Data_Set) + epsilon;
+
+        # Plot!
+        pyplot.contourf(    t_coords_matrix,
+                            x_coords_matrix,
+                            Noisy_Data_Set,
+                            levels      = numpy.linspace(Data_min, Data_max, 500),
+                            cmap        = pyplot.cm.jet);
+
+        pyplot.colorbar();
+        pyplot.xlabel("t");
+        pyplot.ylabel("x");
+        pyplot.show();
+
+    # Now, stitch successive the rows of the coordinate matrices together
+    # to make a 1D array. We interpert the result as a 1 column matrix.
+    t_coords_1D : numpy.ndarray = t_coords_matrix.flatten().reshape(-1, 1);
+    x_coords_1D : numpy.ndarray = x_coords_matrix.flatten().reshape(-1, 1);
 
     # Generate data coordinates, corresponding Data Values.
-    All_Data_Coords : numpy.ndarray = numpy.hstack((t_coords_1D, x_coords_1D, y_coords_1D));
+    All_Data_Coords : numpy.ndarray = numpy.hstack((t_coords_1D, x_coords_1D));
     All_Data_Values : numpy.ndarray = Noisy_Data_Set.flatten();
 
     # Next, generate the Testing/Training sets. To do this, we sample a uniform
@@ -188,23 +208,9 @@ def From_MATLAB_2D( Data_File_Name      : str,
     # Add noise to true solution.
     Noisy_Data_Set : numpy.ndarray = Data_Set + (Noise_Proportion)*numpy.std(Data_Set)*numpy.random.randn(*Data_Set.shape);
 
-    # Generate the grid of (t, x) coordinates. The i,j entry of usol should
-    # hold the value of the solution at the i,j coordinate.
-    num_t_points : int = t_points.size;
-    num_x_points : int = x_points.size;
-    num_y_points : int = y_points.size;
-
-    t_coords_matrix : numpy.ndarray = numpy.empty((num_t_points, num_x_points, num_y_points), dtype = numpy.float32);
-    x_coords_matrix : numpy.ndarray = numpy.empty((num_t_points, num_x_points, num_y_points), dtype = numpy.float32);
-    y_coords_matrix : numpy.ndarray = numpy.empty((num_t_points, num_x_points, num_y_points), dtype = numpy.float32);
-
-    for i in range(num_t_points):
-        for j in range(num_x_points):
-            for k in range(num_y_points):
-                t_coords_matrix[i, j, k] = t_points[i];
-                x_coords_matrix[i, j, k] = x_points[j];
-                y_coords_matrix[i, j, k] = y_points[k];
-
+    # Generate the grid of (t, x, y) coordinates. The i,j,k entry of usol should
+    # hold the value of the solution at the i,j,k coordinate.
+    t_coords_matrix, x_coords_matrix, y_coords_matrix = numpy.meshgrid(t_points, x_points, y_points);
 
     # Now, stitch successive the rows of the coordinate matricies together
     # to make a 1d array. We interpert the result as a 1 column matrix.

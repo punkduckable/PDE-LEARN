@@ -1,9 +1,6 @@
 import numpy;
 import torch;
 import random;
-import scipy.io;
-
-from Settings_Reader import Settings_Container;
 
 
 
