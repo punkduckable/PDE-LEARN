@@ -14,6 +14,10 @@ sys.path.append(Code_path);
 # Code files.
 from Network                import Neural_Network;
 from Plot_Settings_Reader   import Settings_Reader, Settings_Container;
+from Evaluate_Derivatives   import Evaluate_Derivatives;
+from Loss                   import Coll_Loss;
+from Mappings               import Num_Sub_Index_Values_1D, Index_to_x_Derivatives, \
+                                   Col_Number_to_Multi_Index_Class, Max_Col_Num;
 
 import torch;
 import numpy;
@@ -23,18 +27,65 @@ import matplotlib.pyplot as pyplot;
 
 
 
-def Plot_U_1D(  Num_Hidden_Layers   : int,
-                Units_Per_Layer     : int,
-                Activation_Function : str,
-                Device              : torch.device,
-                Load_File_Name      : str,
-                t_Coords_Matrix     : numpy.ndarray,
-                x_Coords_Matrix     : numpy.ndarray,
-                Inputs              : numpy.ndarray,
-                Targets_Matrix      : numpy.ndarray) -> None:
-    """ To do :D
+def Plot_U( Num_Hidden_Layers       : int,
+            Units_Per_Layer         : int,
+            Activation_Function     : str,
+            Device                  : torch.device,
+            Load_File_Name          : str,
+            Time_Derivative_Order   : int,
+            Max_Spatial_Derivatives : int,
+            Maximum_Term_Degree     : int,
+            t_Coords_Matrix         : numpy.ndarray,
+            x_Coords_Matrix         : numpy.ndarray,
+            Inputs                  : numpy.ndarray,
+            Targets_Matrix          : numpy.ndarray) -> None:
+    """ This function plots U, the error between U and the data set, and the
+    PDE Residual. Currently, this function only works if the underlying dataset
+    is in MATLAB. Further, this function only works for datasets with one
+    spatial dimension.
 
-    Note: This can only plot networks with 1 spatial variable. """
+    ----------------------------------------------------------------------------
+    Argumnets:
+
+    Num_Hidden_Layers: The number of hidden layers in the network.
+
+    Units_Per_Layer: The number of hidden units per hidden layer in the network.
+
+    Activation_Function: The activation function of the network.
+
+    Device: The device we want to load the network on.
+
+    Load_File_Name: The Save file that contains the network paramaters + Xi.
+
+    Time_Derivative_Order: We assume an underlying PDE of the form
+            D_t^m U = \sum_{i = 1}^{N} c_i F_i(U, D_x U, ... , D_x^n U)
+    This setting is 'm'.
+
+    Max_Spatial_Derivatives: 'n' in the equation above.
+
+    Maximum_Term_Degree: This determines the complexity of the F_i's in the
+    expression above. Each F_i is of the form \prod_{i = 0}^{n} (D_x^i U)^P(i),
+    where each P(i) is a natural number. We only allow terms for which
+    P(0) + ... + P(n) <= Maximum_Term_Degree.
+
+    t_Coords_Matrix, x_coords_matrix: We evaluate U, the error, and the PDE
+    Residual on a grid of coordinates. These arguments are matricies whose i,j
+    entry holds the value of the x, t coordinate at the (i,j)th coordinate,
+    respectively.
+
+    Inputs: This is a M by 2 tensor (where M is the number of grid points),
+    whose kth row holds the coordinates of the kth gird point. This is literally
+    just  [ flatten(t_coords_matrix), flatten(x_coords_matrix) ]. I made it a
+    separate argument just for convenience.
+
+    Targets_Matrix: This is a matrix with the same shape as t_coords_matrix/
+    x_coords_matrix. It's i,j entry holds the target value at the (i,j)th
+    coordinate.
+
+    ----------------------------------------------------------------------------
+    Returns:
+
+    Nothing! """
 
 
     ############################################################################
@@ -49,21 +100,55 @@ def Plot_U_1D(  Num_Hidden_Layers   : int,
             Activation_Function = Activation_Function,
             Device              = Device);
 
-    # Next, Load U.
+    # Next, set up Xi. First, Determine how many index values we can have. We
+    # will need this value to set up the map from columns to multi indicies.
+    Num_Sub_Index_Values = Num_Sub_Index_Values_1D(Max_Spatial_Derivatives);
+
+    # Determine how many library terms we have. This determines the size of Xi.
+    Num_Library_Terms : int = Max_Col_Num(Max_Sub_Indices      = Maximum_Term_Degree,
+                                          Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+    Xi = torch.zeros(   Num_Library_Terms + 1,
+                        dtype           = torch.float32,
+                        device          = Device,
+                        requires_grad   = True);
+
+    # Next, Load U, Xi.
     Load_File_Path : str = "../Saves/" + Load_File_Name;
     Saved_State = torch.load(Load_File_Path, map_location = Device);
+
     U.load_state_dict(Saved_State["U"]);
+    Xi = Saved_State["Xi"];
+
+    # Map Inputs to a tensor.
+    torch_Inputs : torch.Tensor = torch.from_numpy(Inputs);
 
     # Evaluate the network at these coordinates.
-    U_Coords    : torch.Tensor  = U(torch.from_numpy(Inputs)).view(-1);
+    U_Coords    : torch.Tensor  = U(torch_Inputs).view(-1);
     U_matrix    : numpy.ndarray = U_Coords.detach().numpy().reshape(Targets_Matrix.shape);
+
+    # Set up a map from column numbers to multi-indices.
+    Col_Number_to_Multi_Index = Col_Number_to_Multi_Index_Class(
+                                    Max_Sub_Indices      = Maximum_Term_Degree,
+                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
+
+    # Use the Coll_Loss function to obtain the PDE residual at the Inputs.
+    Residual_Coords : torch.Tensor =    Coll_Loss(
+                                            U                                   = U,
+                                            Xi                                  = Xi,
+                                            Coll_Points                         = torch_Inputs,
+                                            Time_Derivative_Order               = Time_Derivative_Order,
+                                            Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
+                                            Index_to_Derivatives                = Index_to_x_Derivatives,
+                                            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                                            Device                              = Device)[1];
 
 
     ############################################################################
     # Plot the solution.
 
     # first, set figure size.
-    pyplot.figure(figsize = (10, 5));
+    pyplot.figure(figsize = (15, 4));
 
     # Get bounds.
     epsilon : float = .0001;
@@ -71,7 +156,7 @@ def Plot_U_1D(  Num_Hidden_Layers   : int,
     U_max : float = numpy.max(U_matrix) + epsilon;
 
     # Set up Axes object.
-    Ax = pyplot.subplot(1, 2, 1);
+    Ax = pyplot.subplot(1, 3, 1);
     Ax.set_aspect('auto', adjustable = 'datalim');
     Ax.set_box_aspect(1.);
 
@@ -88,17 +173,44 @@ def Plot_U_1D(  Num_Hidden_Layers   : int,
 
 
     ############################################################################
-    # Plot the residual.
+    # Plot the Error.
 
-    # Find Residual.
-    Residual_Matrix : numpy.ndarray = numpy.subtract(U_matrix, Targets_Matrix);
+    # Find Error.
+    Error_Matrix : numpy.ndarray = numpy.subtract(U_matrix, Targets_Matrix);
+
+    # Get bounds.
+    Error_min : float = numpy.min(Error_Matrix) - epsilon;
+    Error_max : float = numpy.max(Error_Matrix) + epsilon;
+
+    # Set up Axes object.
+    Ax = pyplot.subplot(1, 3, 2);
+    Ax.set_aspect('auto', adjustable = 'datalim');
+    Ax.set_box_aspect(1.);
+
+    # Plot!
+    pyplot.contourf(    t_Coords_Matrix,
+                        x_Coords_Matrix,
+                        Error_Matrix,
+                        levels      = numpy.linspace(Error_min, Error_max, 500),
+                        cmap        = pyplot.cm.jet);
+    pyplot.colorbar(location = "right", fraction = 0.046, pad = 0.04);
+    pyplot.xlabel("t");
+    pyplot.ylabel("x");
+    pyplot.title("Error (Approximate minus true solution)");
+
+
+    ############################################################################
+    # Plot the PDE residual.
+
+    # Find PDE Residual.
+    Residual_Matrix : numpy.ndarray = Residual_Coords.detach().numpy().reshape(Targets_Matrix.shape);
 
     # Get bounds.
     Residual_min : float = numpy.min(Residual_Matrix) - epsilon;
     Residual_max : float = numpy.max(Residual_Matrix) + epsilon;
 
     # Set up Axes object.
-    Ax = pyplot.subplot(1, 2, 2);
+    Ax = pyplot.subplot(1, 3, 3);
     Ax.set_aspect('auto', adjustable = 'datalim');
     Ax.set_box_aspect(1.);
 
@@ -111,7 +223,7 @@ def Plot_U_1D(  Num_Hidden_Layers   : int,
     pyplot.colorbar(location = "right", fraction = 0.046, pad = 0.04);
     pyplot.xlabel("t");
     pyplot.ylabel("x");
-    pyplot.title("Residual (Approximate minus true solution)");
+    pyplot.title("PDE Residual");
 
 
     ############################################################################
@@ -162,12 +274,15 @@ if __name__ == "__main__":
     ############################################################################
     # Plot!
 
-    Plot_U_1D(  Num_Hidden_Layers   = Settings.Num_Hidden_Layers,
-                Units_Per_Layer     = Settings.Units_Per_Layer,
-                Activation_Function = Settings.Activation_Function,
-                Device              = torch.device('cpu'),
-                Load_File_Name      = Settings.Load_File_Name,
-                t_Coords_Matrix     = t_Coords_Matrix,
-                x_Coords_Matrix     = x_Coords_Matrix,
-                Inputs              = Inputs,
-                Targets_Matrix      = Targets_Matrix);
+    Plot_U( Num_Hidden_Layers       = Settings.Num_Hidden_Layers,
+            Units_Per_Layer         = Settings.Units_Per_Layer,
+            Activation_Function     = Settings.Activation_Function,
+            Device                  = torch.device('cpu'),
+            Load_File_Name          = Settings.Load_File_Name,
+            Time_Derivative_Order   = Settings.Time_Derivative_Order,
+            Max_Spatial_Derivatives = Settings.Max_Spatial_Derivatives,
+            Maximum_Term_Degree     = Settings.Maximum_Term_Degree,
+            t_Coords_Matrix         = t_Coords_Matrix,
+            x_Coords_Matrix         = x_Coords_Matrix,
+            Inputs                  = Inputs,
+            Targets_Matrix          = Targets_Matrix);

@@ -52,6 +52,10 @@ def Settings_Reader() -> Settings_Container:
     # Number of hidden layers in U network.
     Settings.Num_Hidden_Layers  = int(Read_Setting(File, "Number of Hidden Layers [int]:"));
 
+
+    ############################################################################
+    # Network settings.
+
     # Number of hidden units per hidden layer in the U network.
     Settings.Units_Per_Layer    = int(Read_Setting(File, "Hidden Units per Hidden Layer [int]:"));
 
@@ -66,6 +70,23 @@ def Settings_Reader() -> Settings_Container:
     else:
         raise Read_Error("\"Activation Function [Tanh, Rational, Sin]:\" should be" + \
                          "\"Tanh\", \"Rational\", or \"Sin\" Got " + Buffer);
+
+
+    ############################################################################
+    # PDE settings.
+
+    # What is the order of the time derivative in the PDE?
+    Settings.Time_Derivative_Order      = int(Read_Setting(File, "Time Derivative Order [int]:"));
+
+    # What is the highest order spatial derivative in the PDE?
+    Settings.Max_Spatial_Derivatives    = int(Read_Setting(File, "Highest order spatial derivative of U [int]:"));
+
+    # What is the maximum polynomial degree?
+    Settings.Maximum_Term_Degree        = int(Read_Setting(File, "Maximum Polynomial Term Degree [int]:"));
+
+
+    ############################################################################
+    # DataSet settings.
 
     # Data file name. Note that the data file should NOT contain noise.
     Settings.Mat_File_Name =  Read_Setting(File, "Mat File Name [str]:");
