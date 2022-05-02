@@ -1,6 +1,7 @@
-import numpy;
-import torch;
-import math;
+import  numpy;
+import  torch;
+import  math;
+from    typing import Tuple;
 
 from Network  import    Neural_Network;
 from Mappings import    x_Derivatives_to_Index, xy_Derivatives_to_Index, \
@@ -59,7 +60,7 @@ def Coll_Loss(
         Highest_Order_Spatial_Derivatives   : int,
         Index_to_Derivatives,
         Col_Number_to_Multi_Index,
-        Device                              : torch.device = torch.device('cpu')) -> torch.Tensor:
+        Device                              : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Let L(U) denote the library matrix (i,j entry is the jth library term
     evaluated at the ith collocation point. Note that we define the last library
     term as the constant function 1). Further, let b(U) denote the vector whose
@@ -101,7 +102,11 @@ def Coll_Loss(
     ----------------------------------------------------------------------------
     Returns:
 
-    A scalar value containing the collocation loss. """
+    A tuple. The first entry of the tuple is a scalar tensor whose lone element
+    contains the mean square collocation loss at the Coords. The second is a
+    1D tensor whose ith entry holds the PDE residual at the ith collocation
+    point. You can safely discard the second return variable if you just want
+    to get the loss. """
 
     # First, determine the number of spatial dimensions. Sice U is a function
     # of t and x, or t and x, y, this is just one minus the input dimension of
@@ -155,12 +160,13 @@ def Coll_Loss(
         Ones_Col = torch.ones_like(Dtn_U);
         Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
-        # Now, compute the pointwise square error between Dtn_U and the
+        # Now, compute the pointwise residual between Dtn_U and the
         # Library_Xi_Product.
-        Square_Error = ( Dtn_U - Library_Xi_Product )**2;
+        Residual    : torch.Tensor  = torch.subtract(Dtn_U, Library_Xi_Product);
 
-        # Return the mean square error.
-        return Square_Error.mean();
+        # Return the mean square error, as well as the collocation loss at each
+        # point.
+        return ((Residual**2).mean(), Residual);
 
     elif(Num_Spatial_Dimensions == 2):
         # First, acquire the spatial and time derivatives of U.
@@ -206,12 +212,12 @@ def Coll_Loss(
         Ones_Col = torch.ones_like(Dtn_U);
         Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
 
-        # Now, compute the pointwise square error between Dtn_U and the
+        # Now, compute the pointwise residual between Dtn_U and the
         # Library_Xi_Product.
-        Square_Error = ( Dtn_U - Library_Xi_Product )**2;
+        Residual    : torch.Tensor  = torch.subtract(Dtn_U, Library_Xi_Product);
 
         # Return the mean square error.
-        return Square_Error.mean();
+        return ((Residual**2).mean(), Residual);
 
 
 

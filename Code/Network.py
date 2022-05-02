@@ -28,6 +28,7 @@ class Rational(torch.nn.Module):
                                      device = Device));
         self.b.requires_grad_(True);
 
+
     def forward(self, X : torch.tensor):
         """ This function applies a rational function to each element of X.
 
@@ -165,7 +166,7 @@ class Neural_Network(torch.nn.Module):
             # NOT what the SIREN paper says to do. However, I found that
             # following their initialization scheme causes the derivatives of my
             # network to explode. Zeroing out the first weight matrix
-            # initializes U as the zero map, but eliminates blowup. 
+            # initializes U as the zero map, but eliminates blowup.
             torch.nn.init.constant_(self.Layers[0].weight, 0);
             torch.nn.init.zeros_(   self.Layers[0].bias);
 

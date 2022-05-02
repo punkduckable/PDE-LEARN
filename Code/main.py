@@ -157,18 +157,27 @@ def main():
     ############################################################################
     # Run the Epochs!
 
+    # Set up targeted collocation points.
+    Targeted_Coll_Pts = torch.empty((0, Settings.Num_Spatial_Dimensions + 1), dtype = torch.float32);
+
+    # Set up timer.
     Epoch_Timer : float = time.perf_counter();
+
+    # Epochs!!!
     print("Running %d epochs..." % Settings.Num_Epochs);
-
-    for t in range(Settings.Num_Epochs):
+    for t in range(1, Settings.Num_Epochs + 1):
         # First, generate new training collocation points.
-        Train_Coll_Points = Generate_Points(
-                        Bounds      = Data_Container.Input_Bounds,
-                        Num_Points  = Settings.Num_Train_Coll_Points,
-                        Device      = Settings.Device);
+        Random_Coll_Points = Generate_Points(
+                                Bounds      = Data_Container.Input_Bounds,
+                                Num_Points  = Settings.Num_Train_Coll_Points,
+                                Device      = Settings.Device);
 
-        # Now run a Training Epoch.
-        Training(   U                                   = U,
+        # Now, append the targeted collocation points from the last epoch.
+        Train_Coll_Points : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
+
+        # Now run a Training Epoch. Keep track of the residual.
+        Residual = Training(
+                    U                                   = U,
                     Xi                                  = Xi,
                     Coll_Points                         = Train_Coll_Points,
                     Inputs                              = Data_Container.Train_Inputs,
@@ -182,9 +191,27 @@ def main():
                     Optimizer                           = Optimizer,
                     Device                              = Settings.Device);
 
+        # Find the Absolute value of the residuals. Isolate those corresponding
+        # to the "random" collocation points.
+        Abs_Residual        : torch.Tensor = torch.abs(Residual);
+        Random_Residuals    : torch.Tensor = Abs_Residual[:Settings.Num_Train_Coll_Points];
+
+        # Evaluate the mean, standard deviation of the absolute residual at the
+        # random points.
+        Residual_Mean   : torch.Tensor = torch.mean(Random_Residuals);
+        Residual_SD     : torch.Tensor = torch.std(Random_Residuals);
+
+        # Determine which collocation points have residuals that are more than
+        # 2 STD above the mean.
+        Cutoff                  : float         = Residual_Mean + 2*Residual_SD
+        Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
+
+        # Keep the corresponding collocation points.
+        Targeted_Coll_Pts       : torch.Tensor  = Train_Coll_Points[Big_Residual_Indices, :].detach();
+
         # Test the code (and print the loss) every 10 Epochs. For all other
         # epochs, print the Epoch to indicate the program is making progress.
-        if(t % 10 == 0 or t == Settings.Num_Epochs - 1):
+        if(t % 10 == 0 or t == 1):
             # Generate new testing Collocation Coordinates
             Test_Coll_Points = Generate_Points(
                             Bounds      = Data_Container.Input_Bounds,
@@ -227,7 +254,7 @@ def main():
             print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
                 % (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss, Train_Data_Loss + Train_Coll_Loss + Train_Lp_Loss));
         else:
-            print(("Epoch #%-4d | "   % t));
+            print("Epoch #%-4d | Targeted %3d \t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
     print("Done! It took %7.2fs," % Epoch_Runtime);

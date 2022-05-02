@@ -22,7 +22,7 @@ def Training(
         p                                   : float,
         Lambda                              : float,
         Optimizer                           : torch.optim.Optimizer,
-        Device                              : torch.device = torch.device('cpu')) -> None:
+        Device                              : torch.device = torch.device('cpu')) -> torch.Tensor:
     """ This function runs one epoch of training. We enforce the learned PDE
     (library-Xi product) at the Coll_Points. We also make U match the
     Targets at the Inputs.
@@ -75,10 +75,15 @@ def Training(
     ----------------------------------------------------------------------------
     Returns:
 
-    Nothing! """
+    a 1D tensor whose ith entry holds the value of the collocation loss at the
+    ith collocation point. We use this for adaptive collocation points. You can
+    safely discard this argument if you want to. """
 
     # Put U in training mode.
     U.train();
+
+    # Initialize Residual variable.
+    Residual = torch.empty(Coll_Points.size()[0], dtype = torch.float32);
 
     # Define closure function (needed for LBFGS)
     def Closure():
@@ -86,28 +91,30 @@ def Training(
         if (torch.is_grad_enabled()):
             Optimizer.zero_grad();
 
-        # Evaluate the Loss
-        Loss = (Coll_Loss(
-                    U                                   = U,
-                    Xi                                  = Xi,
-                    Coll_Points                         = Coll_Points,
-                    Time_Derivative_Order               = Time_Derivative_Order,
-                    Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                    Index_to_Derivatives                = Index_to_Derivatives,
-                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                    Device                              = Device)
+        # Evaluate the Losses
+        Coll_Loss_Value, Resid = Coll_Loss( U                                   = U,
+                                            Xi                                  = Xi,
+                                            Coll_Points                         = Coll_Points,
+                                            Time_Derivative_Order               = Time_Derivative_Order,
+                                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
+                                            Index_to_Derivatives                = Index_to_Derivatives,
+                                            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                                            Device                              = Device);
 
-                +
+        Data_Loss_Value : torch.Tensor  = Data_Loss(
+                                            U                   = U,
+                                            Inputs              = Inputs,
+                                            Targets             = Targets);
 
-                Data_Loss(
-                    U                   = U,
-                    Inputs              = Inputs,
-                    Targets             = Targets)
+        Lp_Loss_Value   : torch.tensor  = Lp_Loss(
+                                            Xi      = Xi,
+                                            p       = p);
 
-                +
+        # Evaluate the loss.
+        Loss    : torch.Tensor  = Coll_Loss_Value + Data_Loss_Value + Lambda*Lp_Loss_Value;
 
-                Lambda*Lp_Loss( Xi      = Xi,
-                                p       = p));
+        # Assign the residual.
+        Residual[:] = Resid;
 
         # Back-propigate to compute gradients of Loss with respect to network
         # parameters (only do if this if the loss requires grad)
@@ -118,6 +125,9 @@ def Training(
 
     # update network parameters.
     Optimizer.step(Closure);
+
+    # Return the residual tensor.
+    return Residual;
 
 
 
@@ -205,7 +215,7 @@ def Testing(
             Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
             Index_to_Derivatives                = Index_to_Derivatives,
             Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-            Device                              = Device).item();
+            Device                              = Device)[0].item();
 
     Lambda_Lp_Loss_Value : float = Lambda*Lp_Loss(
             Xi    = Xi,
