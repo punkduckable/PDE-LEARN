@@ -518,7 +518,7 @@ class Multi_Index_to_Col_Number_Class():
 
 class Col_Number_to_Multi_Index_Class():
     """ This class creates functors which map column numbers back to their
-    corresponding multi-indicies. Specicially, its object acts as an inverse to
+    corresponding multi-indicies. Specifically, its object acts as an inverse to
     the functors created by Multi_Index_to_Col_Number. It accomplishes this
     using a pair of look-up tables.
 

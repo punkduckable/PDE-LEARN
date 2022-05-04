@@ -124,7 +124,7 @@ def Plot_U( Num_Hidden_Layers       : int,
     torch_Inputs : torch.Tensor = torch.from_numpy(Inputs);
 
     # Evaluate the network at these coordinates.
-    U_Coords    : torch.Tensor  = U(torch_Inputs).view(-1);
+    U_Coords    : torch.Tensor  = U(torch_Inputs).detach().view(-1);
     U_matrix    : numpy.ndarray = U_Coords.detach().numpy().reshape(Targets_Matrix.shape);
 
     # Set up a map from column numbers to multi-indices.
@@ -132,16 +132,33 @@ def Plot_U( Num_Hidden_Layers       : int,
                                     Max_Sub_Indices      = Maximum_Term_Degree,
                                     Num_Sub_Index_Values = Num_Sub_Index_Values);
 
-    # Use the Coll_Loss function to obtain the PDE residual at the Inputs.
-    Residual_Coords : torch.Tensor =    Coll_Loss(
-                                            U                                   = U,
-                                            Xi                                  = Xi,
-                                            Coll_Points                         = torch_Inputs,
-                                            Time_Derivative_Order               = Time_Derivative_Order,
-                                            Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
-                                            Index_to_Derivatives                = Index_to_x_Derivatives,
-                                            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                                            Device                              = Device)[1];
+    # Use the Coll_Loss function to obtain the PDE residual at the Inputs. We
+    # do this in batches to conserve memory.
+    Residual_Coords : torch.Tensor = torch.empty_like(U_Coords);
+
+    Num_Coords  : int = torch_Inputs.shape[0];
+    Num_Batches : int = Num_Coords // 1000;
+    for i in range(Num_Batches):
+        Residual_Coords[i*1000 : (i + 1)*1000] = Coll_Loss(
+                                                    U                                   = U,
+                                                    Xi                                  = Xi,
+                                                    Coll_Points                         = torch_Inputs[i*1000:(i + 1)*1000, :],
+                                                    Time_Derivative_Order               = Time_Derivative_Order,
+                                                    Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
+                                                    Index_to_Derivatives                = Index_to_x_Derivatives,
+                                                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                                                    Device                              = Device)[1].detach();
+    # Clean up.
+    if(Num_Coords % 1000 != 0):
+        Residual_Coords[Num_Batches*1000:] = Coll_Loss(
+                                                U                                   = U,
+                                                Xi                                  = Xi,
+                                                Coll_Points                         = torch_Inputs[Num_Batches*1000:, :],
+                                                Time_Derivative_Order               = Time_Derivative_Order,
+                                                Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
+                                                Index_to_Derivatives                = Index_to_x_Derivatives,
+                                                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
+                                                Device                              = Device)[1].detach();
 
 
     ############################################################################

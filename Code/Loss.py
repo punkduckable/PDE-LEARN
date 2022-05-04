@@ -90,7 +90,7 @@ def Coll_Loss(
     library terms. We need to know this to evaluate the spatial partial
     derivatives of Xi and, subsequently, evaluate the library terms.
 
-    Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps
+    Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps a
     sub-index value to a number of x derivatives. If Num_Spatial_Dimensions = 2,
     then this maps a sub-index value to a number of x and y derivatives.
 

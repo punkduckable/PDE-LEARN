@@ -111,7 +111,7 @@ def Training(
                                             p       = p);
 
         # Evaluate the loss.
-        Loss    : torch.Tensor  = Coll_Loss_Value + Data_Loss_Value + Lambda*Lp_Loss_Value;
+        Loss    : torch.Tensor  = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
 
         # Assign the residual.
         Residual[:] = Resid;
