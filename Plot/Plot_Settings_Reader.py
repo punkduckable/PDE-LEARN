@@ -6,13 +6,14 @@ import sys
 # Get path to Reader directory.
 Main_Path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
 Code_Path       = os.path.join(Main_Path, "Code");
+Readers_Path    = os.path.join(Code_path, "Readers");
 
 # Add the Readers, Classes directories to the python path.
-sys.path.append(Code_Path);
+sys.path.append(Readers_Path);
 
 import torch;
 
-from Settings_Reader    import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
+from File_Reader    import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
 
 
 

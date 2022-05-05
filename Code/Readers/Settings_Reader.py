@@ -1,13 +1,12 @@
 import torch;
-import numpy;
+
+from File_Reader    import Read_Error, Read_Line_After, Read_Bool_Setting, Read_Setting, Read_Error;
+from Library_Reader import Read_Library;
 
 
 
 ################################################################################
 # Classes
-class Read_Error(Exception):
-    # Raised if we can't find a Phrase in a File.
-    pass;
 
 class Settings_Container:
     # A container for data read in from the settings file.
@@ -261,16 +260,16 @@ def Settings_Reader() -> Settings_Container:
 
 
     ############################################################################
-    # PDE settings.
+    # Library Settings.
 
-    # The order of the time derivative on the left-hand side of the PDE.
-    Settings.Time_Derivative_Order = int(Read_Setting(File, "Time Derivative Order [int]:"));
+    # Where is the file that lists the library functions / derivatives?
+    Library_File_Name : str             = Read_Setting(File, "Library File [str]:");
+    Library_Path      : str             = "../" + Library_File_Name + ".txt";
+    Derivatives, LHS_Term, RHS_Terms    = Read_Library(Library_Path);
 
-    # Highest order derivatives of U we want the library terms to be a function of.
-    Settings.Highest_Order_Spatial_Derivatives =  int(Read_Setting(File, "Highest order spatial derivative of U [int]:"));
-
-    # Maximum polynomial degree of the polynomial terms.
-    Settings.Maximum_Term_Degree = int(Read_Setting(File, "Maximum Polynomial Term Degree [int]:"));
+    Settings.Derivatives    = Derivatives;
+    Settings.LHS_Term       = LHS_Term;
+    Settings.RHS_Terms      = RHS_Terms;
 
 
 
@@ -317,8 +316,6 @@ def Settings_Reader() -> Settings_Container:
 
     # Read Lambda value (used to scale the p-norm of Xi).
     Settings.Lambda = float(Read_Setting(File, "Lambda [float]:"));
-
-
 
     # Read number of testing/training data/collocation points
     Settings.Num_Train_Coll_Points = int(Read_Setting(File, "Number of Training Collocation Points [int]:"));

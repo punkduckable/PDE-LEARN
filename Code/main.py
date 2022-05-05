@@ -1,3 +1,15 @@
+# Nonsense to add Readers, Classes directories to the Python search path.
+import os
+import sys
+
+# Get path to Code, Readers, Classes directories.
+Code_Path       = os.path.dirname(os.path.abspath(__file__));
+Readers_Path    = os.path.join(Code_Path, "Readers");
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Readers, Classes directories to the python path.
+sys.path.append(Readers_Path);
+
 import numpy;
 import torch;
 import time;
@@ -203,7 +215,7 @@ def main():
 
         # Determine which collocation points have residuals that are more than
         # 2 STD above the mean.
-        Cutoff                  : float         = Residual_Mean + 2*Residual_SD
+        Cutoff                  : float         = Residual_Mean + 3*Residual_SD
         Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
 
         # Keep the corresponding collocation points.

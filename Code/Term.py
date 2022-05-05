@@ -1,4 +1,4 @@
-`import  numpy;
+import  numpy;
 from    typing      import List;
 
 from    Derivative  import Derivative;
@@ -27,7 +27,7 @@ class Term():
     the list above. """
 
     def __init__(   self,
-                    Derivatives :   List[Derivatives],
+                    Derivatives :   List[Derivative],
                     Powers      :   List[int]):
         """ This is the class initializer. If Derivatives and Powers have n
         elements, the ith entry of Derivatives corresponds to the partial
@@ -89,7 +89,8 @@ class Term():
 
         # Cycle through the sub-terms.
         for i in range(len(self.Derivatives)):
-            Buffer += "(" + self.Derivatives[i].__str__() + ")^" + str(self.Powers[i]);
+            Buffer += "(" + self.Derivatives[i].__str__() + "U)^" + str(self.Powers[i]);
+
 
         # All done! Return!
         return Buffer;
