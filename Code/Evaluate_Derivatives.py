@@ -1,3 +1,14 @@
+# Nonsense to add Readers, Classes directories to the Python search path.
+import os
+import sys
+
+# Get path to Code, Readers, Classes directories.
+Code_Path       = os.path.dirname(os.path.abspath(__file__));
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Readers, Classes directories to the python path.
+sys.path.append(Classes_Path);
+
 from typing import Tuple, List;
 import torch;
 

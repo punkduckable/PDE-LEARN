@@ -3,10 +3,11 @@ import os
 import sys
 
 # Get path to parent directory (the Code directory, in this case)
-Code_path  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
+Code_path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
+Classes_Path    = os.path.join(Code_path, "Classes");
 
 # Add the Code directory to the python path.
-sys.path.append(Code_path);
+sys.path.append(Classes_Path);
 
 import  numpy;
 from    typing          import List, Tuple, Dict;

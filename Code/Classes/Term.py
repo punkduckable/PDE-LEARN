@@ -87,10 +87,19 @@ class Term():
         # Initialize Buffer.
         Buffer : str = "";
 
-        # Cycle through the sub-terms.
-        for i in range(len(self.Derivatives)):
-            Buffer += "(" + self.Derivatives[i].__str__() + "U)^" + str(self.Powers[i]);
+        # Cycle through the sub-terms, if there are any.
+        if(len(self.Derivatives) >= 1):
+            for i in range(len(self.Derivatives)):
+                # Append the sub-terms's derivative.
+                Buffer += "(" + self.Derivatives[i].__str__() + "U)";
 
+                # Append the sub-term's power if it's > 1.
+                if(self.Powers[i] > 1):
+                    Buffer += "^" + str(self.Powers[i]);
+
+                # Append the '*' symbol between sub-terms.
+                if(i != len(self.Derivatives) - 1):
+                    Buffer += " * ";
 
         # All done! Return!
         return Buffer;

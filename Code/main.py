@@ -9,6 +9,7 @@ Classes_Path    = os.path.join(Code_Path, "Classes");
 
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Readers_Path);
+sys.path.append(Classes_Path);
 
 import numpy;
 import torch;
