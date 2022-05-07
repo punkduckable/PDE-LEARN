@@ -23,8 +23,11 @@ class Term():
     Derivatives : A list of Derivative objects. The kth entry of this list
     represents D^{(k)} in the expression above.
 
-    Powers : A list of integers. The kth entry of this list represents p(k) in
-    the list above. """
+    Powers : A list of natural numbers. The kth entry of this list represents
+    p(k) in the list above.
+
+    Num_Sub_Terms : The number of sub terms in the Term. Equivalently, the
+    length of Derivatives and Powers.  """
 
     def __init__(   self,
                     Derivatives :   List[Derivative],
@@ -40,19 +43,20 @@ class Term():
 
         Derivatives : A list of derivative objects.
 
-        Powers : A list of integers. This list should be the same length as
-        Derivatives. """
+        Powers : A list of natural numbers. This list should be the same length
+        as Derivatives. """
 
         # Make sure Derivatives, Powers have the same length
         assert(len(Derivatives) == len(Powers));
 
-        # Make sure each power is non-negative
+        # Make sure each power is positive
         for i in range(len(Powers)):
-            assert(Powers[i] >= 0);
+            assert(Powers[i] >= 1);
 
         # Set up Derivatives, Powers.
         self.Derivatives    = Derivatives;
         self.Powers         = Powers;
+        self.Num_Sub_Terms  = len(Powers);
 
 
 
@@ -77,6 +81,7 @@ class Term():
         # Append new entries to the Derivatives, Powers lists.
         self.Derivatives.append(Derivative);
         self.Powers.append(Power);
+        self.Num_Sub_Terms += 1;
 
 
 

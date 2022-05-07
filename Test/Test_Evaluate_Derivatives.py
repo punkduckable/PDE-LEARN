@@ -70,7 +70,7 @@ class Test_Derivative_From_Derivative(unittest.TestCase):
         Dt2_P_True : torch.Tensor = torch.zeros(Num_Coords);
         for i in range(0, n - 1):
             Dt2_P_True += (n - i)*(n - 1 - i)*torch.multiply(torch.pow(t, n - 2 - i), torch.pow(x, i));
-        
+
         # Compute D_x P.
         Dx_P_True : torch.Tensor = torch.zeros(Num_Coords);
         for i in range(1, n + 1):
@@ -117,6 +117,22 @@ class Test_Derivative_From_Derivative(unittest.TestCase):
             # than epsilon.
             self.assertEqual(torch.sum(torch.greater_equal(Dx_Abs_Error, epsilon)), 0);
             self.assertEqual(torch.sum(torch.greater_equal(Dt_Abs_Error, epsilon)), 0);
+
+
+
+        ########################################################################
+        # Check that calculating Dx P from Dx P gives Dx P.
+
+        Dx_P_From_Dx_P = Derivative_From_Derivative(Da = Dx, Db = Dx, Db_U = Dx_P, Coords = Coords);
+
+        for i in range(Num_Coords):
+            # | Dx_P_From_Dx_P - Dx_P_True | (component-wise)
+            Dx_Abs_Error = torch.abs(torch.subtract(Dx_P_From_Dx_P, Dx_P_True));
+
+            # Check that there are no components of the above which are bigger
+            # than epsilon.
+            self.assertEqual(torch.sum(torch.greater_equal(Dx_Abs_Error, epsilon)), 0);
+
 
 
         ########################################################################
@@ -167,11 +183,10 @@ class Test_Derivative_From_Derivative(unittest.TestCase):
 
         # Check that they match DxDt_P_True.
         for i in range(Num_Coords):
-            # | Dt2_P_From_P - Dt2_P_True |, | Dt2_P_From_Dx_P - Dt2_P_True |
+            # | DxDt_P_From_P - DxDt_P_True |, | DxDt_P_From_Dx_P - DxDt_P_True |
             From_P_Abs_Error    = torch.abs(torch.subtract(DxDt_P_From_P,       DxDt_P_True));
             From_Dx_P_Abs_Error = torch.abs(torch.subtract(DxDt_P_From_Dx_P,    DxDt_P_True));
             From_Dt_P_Abs_Error = torch.abs(torch.subtract(DxDt_P_From_Dt_P,    DxDt_P_True));
-
 
             # Check that there are no components of the above which are bigger
             # than epsilon.
