@@ -17,12 +17,12 @@ import random;
 import math;
 
 # Code files.
-from Loss import Coll_Loss, L0_Approx_Loss, Lp_Loss;
-from Points import Generate_Points;
+from Loss       import Coll_Loss, L0_Approx_Loss, Lp_Loss;
+from Points     import Generate_Points;
 from Evaluate_Derivatives import Evaluate_Derivatives;
-from Mappings import xy_Derivatives_to_Index, Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
-                     Num_Multi_Indices, Multi_Indices_Array, \
-                     Multi_Index_to_Col_Number_Class, Col_Number_to_Multi_Index_Class;
+from Mappings   import  xy_Derivatives_to_Index, Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
+                        Num_Multi_Indices, Multi_Indices_Array, \
+                        Multi_Index_to_Col_Number_Class, Col_Number_to_Multi_Index_Class;
 
 # Other test file.
 from Polynomials import Polynomial_1d, Polynomial_2d;

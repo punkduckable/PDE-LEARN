@@ -92,6 +92,48 @@ class Derivative():
 
 
 
+    def Is_Child_Of(self, D) -> bool:
+        """ This function determines if D is a "child" of the derivative
+        operator D. What does this mean? Let D_1 and D_2 be derivative objects.
+        Let [p_1, ... , p_n] and [q_1, ... , q_m] denote D_1's and D_2's
+        encoding vectors, respectively. Let l = min{n, m}. D_1 is a child of
+        D_2 if and only if for k \in {1, 2, ... , l}, p_k <= q_k and p_k for
+        k > l. This is equivalent to saying that there is a derivative operator
+        D_3 such that D_2 U = D_3 D_1 U.
+
+        ------------------------------------------------------------------------
+        Arguments:
+
+        D : A derivative operator. This function determines if self is a child
+        of D.
+
+
+        ------------------------------------------------------------------------
+        Returns:
+
+        A boolean; True if self is a child of D, False otherwise. """
+
+        # First, find l, the minimum length of self.Encoding and D.Encoding.
+        n : int = len(self.Encoding);
+        m : int = len(D.Encoding);
+        l : int = min(n, m);
+
+        # Check that self.Encoding[k] <= D.Encoding[k] for k <= l.
+        for k in range(l):
+            if(self.Encoding[k] > D.Encoding[k]):
+                return False;
+
+        # Assuming self.Encoding is longer than D.Encoding, make sure that the
+        # components of self.Encoding after the l'th are zero.
+        for k in range(l + 1, n):
+            if(self.Encoding[k] != 0):
+                return False;
+
+        # If we make it here, then self is a child of D.
+        return True;
+
+
+
 def Get_Order(D : Derivative):
     """ This function returns D's order. This function exists only to enable
     sorting with lists of derivative operators. """
