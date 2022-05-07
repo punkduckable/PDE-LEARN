@@ -6,8 +6,12 @@ import sys
 parent_dir  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
 
 # Add the Code directory to the python path.
-Code_path   = os.path.join(parent_dir, "Code");
-sys.path.append(Code_path);
+Code_Path       = os.path.join(parent_dir, "Code");
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Code, Classes paths.
+sys.path.append(Code_Path);
+sys.path.append(Classes_Path);
 
 # external libraries and stuff.
 import numpy;
@@ -17,79 +21,94 @@ import random;
 import math;
 
 # Code files.
+from Derivative import Derivative;
+from Term       import Term;
 from Loss       import Coll_Loss, L0_Approx_Loss, Lp_Loss;
 from Points     import Generate_Points;
-from Evaluate_Derivatives import Evaluate_Derivatives;
-from Mappings   import  xy_Derivatives_to_Index, Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
-                        Num_Multi_Indices, Multi_Indices_Array, \
-                        Multi_Index_to_Col_Number_Class, Col_Number_to_Multi_Index_Class;
+from Evaluate_Derivatives import Derivative_From_Derivative;
 
 # Other test file.
 from Polynomials import Polynomial_1d, Polynomial_2d;
+
 
 
 class Loss_Test(unittest.TestCase):
     def test_Coll_Loss_1D(self):
         # Set up U to be a 1d polynomial.
         n : int = 4;
-        U_Poly = Polynomial_1d(n);
+        P       = Polynomial_1d(n);
 
         # Generate some collocation coordinates.
         Bounds = numpy.array(  [[0 , 1],
                                 [-1, 1]], dtype = numpy.float32);
-        Coll_Points = Generate_Points(Bounds = Bounds, Num_Points = 1000);
+        Coords = Generate_Points(Bounds = Bounds, Num_Points = 1000);
+        Coords.requires_grad_(True);
 
-        # Evaluate predicted values. For this, we will use derivatives of up to
-        # order 4. We will also only allow linear terms. In this case, there are
-        # 6 library terms:
-        #          U, D_{x}U, D_{xx}U, D_{xxx}U, D_{xxxx}U, 1
-        # We evaluate each one using Evaluate_Derivatives (another test
-        # verifies that this function works). We Also assume Xi is a vector of
-        # ones. As such, we should get the following Library-Xi product.
-        #       U + D_{x}U + D_{xx}U + D_{xxx}U + D_{xxxx}U + 1
-        # And thus, we expect the Coll_Loss to be the mean of the square of
-        # the difference between this value and D_{t}U.
-        Highest_Order_Spatial_Derivatives : int = 4;
-        Max_Sub_Indices : int = 1;
-        (Dt_U, Dxy_U)         = Evaluate_Derivatives(
-                                    U                                   = U_Poly,
-                                    Time_Derivative_Order               = 1,
-                                    Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                                    Coords                              = Coll_Points);
+        # Evaluate predicted values. For this, we will use the following
+        # library terms:
+        #          (U)^4, (D_{x} U)^3, (D_{xx} U)^2, (D_{xxx} U), (U)(D_{x} U)^2
 
-        # Evaluate Library_Xi product!
-        #                     U          D_{x}U     D_{xx}U
-        Library_Xi_Product = (Dxy_U[0] + Dxy_U[1] + Dxy_U[2] +
-                              Dxy_U[3] + Dxy_U[4] + torch.ones_like(Dt_U));
-        #                     D_{xxx}U   D_{xxxx}U  1
+        # First, set up the Derivatives.
+        I   : Derivative  = Derivative(Encoding = numpy.array([0, 0]));
+        Dt  : Derivative  = Derivative(Encoding = numpy.array([1, 0]));
+        Dx  : Derivative  = Derivative(Encoding = numpy.array([0, 1]));
+        Dx2 : Derivative  = Derivative(Encoding = numpy.array([0, 2]));
+        Dx3 : Derivative  = Derivative(Encoding = numpy.array([0, 3]));
 
-        # Now evaluate the mean square difference between Dt_U and the
-        # Library_Xi_Product.
-        Square_Error_Predict = torch.pow(torch.sub(Dt_U, Library_Xi_Product), 2);
-        Coll_Loss_Predict    = Square_Error_Predict.mean();
+        # Make the Derivatives list.
+        Derivatives : List[Derivative] = [I, Dt, Dx, Dx2, Dx3];
+
+        # Make the LHS Term.
+        LHS_Term = Term(Derivatives = [Dt], Powers = [1]);
+
+        # Make the RHS Terms.
+        T_1 : Term = Term(Derivatives = [I],        Powers = [4]);
+        T_2 : Term = Term(Derivatives = [Dx],       Powers = [3]);
+        T_3 : Term = Term(Derivatives = [Dx2],      Powers = [2]);
+        T_4 : Term = Term(Derivatives = [Dx3],      Powers = [1]);
+        T_5 : Term = Term(Derivatives = [I, Dx],    Powers = [1, 2]);
+
+        RHS_Terms : List[Terms] = [T_1, T_2, T_3, T_4, T_5];
+
+        # Now, evaluate each derivative of U at the Coords. (another test
+        # verifies that this function works)
+        P_Coords    = P(Coords).view(-1);
+        Dt_P        = Derivative_From_Derivative(Da = Dt,  Db = I,   Db_U = P_Coords, Coords = Coords).view(-1);
+        Dx_P        = Derivative_From_Derivative(Da = Dx,  Db = I,   Db_U = P_Coords, Coords = Coords).view(-1);
+        Dx2_P       = Derivative_From_Derivative(Da = Dx2, Db = Dx,  Db_U = Dx_P,     Coords = Coords).view(-1);
+        Dx3_P       = Derivative_From_Derivative(Da = Dx3, Db = Dx2, Db_U = Dx2_P,    Coords = Coords).view(-1);
+
+        # For this test, Xi will be a vector of ones.
+        Xi = torch.ones(5, dtype = torch.float32);
+
+        # Calculate b(U) predicted.
+        b_U_Pred    = Dt_P;
+
+        # Calculate L(U)Xi predicted.
+        L_U_Xi_Pred =  (torch.pow(P_Coords, 4) +
+                        torch.pow(Dx_P,     3) +
+                        torch.pow(Dx2_P,    2) +
+                        Dx3_P +
+                        torch.multiply(P_Coords, torch.pow(Dx_P, 2)));
+
+        # Calculated predicted loss (mean square residual).
+        Loss_Pred = torch.mean(torch.pow(torch.subtract(b_U_Pred, L_U_Xi_Pred), 2));
+
 
 
         ########################################################################
         # Now let's see what Coll_Loss actually gives.
 
-        # Initialize Xi, Col_Number_to_Multi_Index and Index_to_xy_Derivatives.
-        Xi = torch.ones(6, dtype = torch.float32);
-
-        Num_Sub_Index_Values = 5; # U, D_{x}U, D_{xx}U, D_{xxx}U, D_{xxxx}U
-        Col_Number_to_Multi_Index = Col_Number_to_Multi_Index_Class(
-                                        Max_Sub_Indices      = Max_Sub_Indices,
-                                        Num_Sub_Index_Values = Num_Sub_Index_Values);
-
-        Coll_Loss_Actual = Coll_Loss(   U                                   = U_Poly,
-                                        Xi                                  = Xi,
-                                        Coll_Points                         = Coll_Points,
-                                        Time_Derivative_Order               = 1,
-                                        Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                                        Index_to_Derivatives                = Index_to_x_Derivatives,
-                                        Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index);
+        Loss_Actual = Coll_Loss(    U               = P,
+                                    Xi              = Xi,
+                                    Inputs          = Coords,
+                                    Derivatives     = Derivatives,
+                                    LHS_Term        = LHS_Term,
+                                    RHS_Terms       = RHS_Terms)[0];
         # Check that it worked!
-        self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
+        self.assertEqual(Loss_Actual.item(), Loss_Pred.item());
 
+    """
     def test_Coll_Loss_2D(self):
         # Set up U to be a 2d polynomial.
         n : int = 3;
@@ -153,7 +172,7 @@ class Loss_Test(unittest.TestCase):
                                         Index_to_Derivatives                = Index_to_xy_Derivatives,
                                         Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index);
         # Check that it worked!
-        self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);
+        self.assertEqual(Coll_Loss_Actual, Coll_Loss_Predict);"""
 
 
 

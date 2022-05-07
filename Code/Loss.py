@@ -63,13 +63,13 @@ def Data_Loss(
 
 
 def Coll_Loss(
-        U                                   : Neural_Network,
-        Xi                                  : torch.Tensor,
-        Coll_Points                         : torch.Tensor,
-        Derivatives                         : List[Derivative],
-        LHS_Term                            : Term,
-        RHS_Terms                           : List[Term],
-        Device                              : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
+        U           : Neural_Network,
+        Xi          : torch.Tensor,
+        Inputs      : torch.Tensor,
+        Derivatives : List[Derivative],
+        LHS_Term    : Term,
+        RHS_Terms   : List[Term],
+        Device      : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Let L(U) denote the library matrix (i,j entry is the jth RHS term
     evaluated at the ith collocation point. Further, let b(U) denote the vector
     whose ith entry is the LHS Term at the ith collocation point. Then
@@ -83,9 +83,9 @@ def Coll_Loss(
     Xi: A trainable (requires_grad = True) torch 1D tensor. If there are N
     RHS_Terms, this should be an N element vector.
 
-    Coll_Points: B by n column tensor, where B is the number of coordinates and
-    n is the dimension of the problem domain. The ith row of Coll_Points should
-    hold the components of the ith coordinate.
+    Inputs: B by n column tensor, where B is the number of coordinates and
+    n is the dimension of the problem domain. The ith row of Inputs should
+    hold the components of the ith input.
 
     Derivatives: We try to solve a PDE of the form
             T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
@@ -107,7 +107,7 @@ def Coll_Loss(
     Returns:
 
     A tuple. The first entry of the tuple is a scalar tensor whose lone element
-    contains the mean square collocation loss at the Coords. The second is a
+    contains the mean square collocation loss at the Inputs. The second is a
     1D tensor whose ith entry holds the PDE residual at the ith collocation
     point. You can safely discard the second return variable if you just want
     to get the loss. """
@@ -115,8 +115,8 @@ def Coll_Loss(
     # Make sure Xi's length matches RHS_Terms'.
     assert(torch.numel(Xi) == len(RHS_Terms));
 
-    # First, evaluate U at the Coords.
-    U_Coords : torch.Tensor = U(Coll_Points).view(-1);
+    # First, evaluate U at the Inputs.
+    U_Coords : torch.Tensor = U(Inputs).view(-1);
 
 
 
@@ -144,7 +144,7 @@ def Coll_Loss(
                                         Da      = D_j,
                                         Db      = D_i,
                                         Db_U    = D_U_Dict[tuple(D_i.Encoding)],
-                                        Coords  = Coords).view(-1);
+                                        Coords  = Inputs).view(-1);
 
 
                 # Store the result in the dictionary.
@@ -164,7 +164,7 @@ def Coll_Loss(
                                     Da      = D_j,
                                     Db      = I,
                                     Db_U    = U_Coords,
-                                    Coords  = Coords).view(-1);
+                                    Coords  = Inputs).view(-1);
 
             # Store the result in the dictionary.
             D_U_Dict[tuple(D_j.Encoding)] = D_j_U;
@@ -179,14 +179,18 @@ def Coll_Loss(
 
     # Cycle through the sub-terms of the LHS Term.
     for i in range(LHS_Term.Num_Sub_Terms):
-        # First, fetch the sub-term's derivative.
-        D_i : Derivative = LHS_Term.Derivatives[i];
+        # First, fetch the sub-term's derivative, power.
+        Di : Derivative = LHS_Term.Derivatives[i];
+        pi : int        = LHS_Term.Powers[i];
 
         # Next, fetch its value from the dictionary.
-        D_i_U : torch.Tensor = D_U_Dict[tuple(D_i.Encoding)];
+        Di_U : torch.Tensor = D_U_Dict[tuple(Di.Encoding)];
+
+        # Raise it to the sub term's power.
+        Di_U_pi : torch.Tensor = torch.pow(Di_U, pi);
 
         # Accumulate D_i_U into b_U.
-        b_U = torch.multiply(b_U, D_i_U);
+        b_U = torch.multiply(b_U, Di_U_pi);
 
 
 
@@ -205,14 +209,18 @@ def Coll_Loss(
 
         # Cycle through T_j's sub-terms.
         for i in range(T_j.Num_Sub_Terms):
-            # First, fetch the sub-term's derivative.
-            D_i : Derivative = LHS_Term.Derivatives[i];
+            # First, fetch the derivative, power for T_j's ith sub-term.
+            Di : Derivative = T_j.Derivatives[i];
+            pi : int        = T_j.Powers[i];
 
             # Next, fetch its value from the dictionary.
-            D_i_U : torch.Tensor = D_U_Dict[tuple(D_i.Encoding)];
+            Di_U : torch.Tensor = D_U_Dict[tuple(Di.Encoding)];
+
+            # Raise it to the sub term's power.
+            Di_U_pi : torch.Tensor = torch.pow(Di_U, pi);
 
             # Accumulate D_i_U into T_j_U.
-            T_j_U = torch.multiply(T_j_U, D_i_U);
+            T_j_U = torch.multiply(T_j_U, Di_U_pi);
 
         # Accumulate T_j_U*Xi[j] into L_U_Xi.
         L_U_Xi += torch.multiply(T_j_U, Xi[j]);
