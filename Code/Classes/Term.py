@@ -104,7 +104,7 @@ class Term():
 
                 # Append the '*' symbol between sub-terms.
                 if(i != len(self.Derivatives) - 1):
-                    Buffer += " * ";
+                    Buffer += "*";
 
         # All done! Return!
         return Buffer;

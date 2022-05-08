@@ -1,6 +1,6 @@
 import torch;
 
-class Polynomial_1d:
+class Polynomial_2D:
     def __init__(self, n : int):
         self.n = n;
         self.Input_Dim = 2;
@@ -27,7 +27,7 @@ class Polynomial_1d:
 
 
 
-class Polynomial_2d:
+class Polynomial_3D:
     def __init__(self, n : int):
         self.n = n;
         self.Input_Dim = 3;

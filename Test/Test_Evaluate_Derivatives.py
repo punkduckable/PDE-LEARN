@@ -25,18 +25,18 @@ from Evaluate_Derivatives   import Derivative_From_Derivative;
 from Derivative             import Derivative;
 
 # Other test file.
-from Polynomials            import Polynomial_1d, Polynomial_2d;
+from Polynomials            import Polynomial_2D, Polynomial_3D;
 
 
 
 class Test_Derivative_From_Derivative(unittest.TestCase):
-    def test_Eval_Derivative_1D(self):
+    def test_Eval_Derivative_2D(self):
         # First, we need to set up a simple function with known derivatives so
         # that we can check it works properly. For this, I will use the
         # following function:
         #       (t, x) -> t^n + t^(n - 1) x + ... + t x^(n - 1) + x^n.
         n : int             = 3;
-        P : Polynomial_1d   = Polynomial_1d(n);
+        P : Polynomial_2D   = Polynomial_2D(n);
 
         # Now, generate some coordinates.
         Num_Coords  : int           = 50;
@@ -196,13 +196,13 @@ class Test_Derivative_From_Derivative(unittest.TestCase):
 
 
     """
-    def test_Evalu_Deriv_2D(self):
+    def test_Evalu_Deriv_3D(self):
         # First, we need to set up a simple function with known derivatives so that
         # we can check it works properly. For this, I will use the following
         # function:
         #       (t, x, y) -> t^n + x^n + x^(n-1)y + ... + xy^(n-1) + y^n
         n = 3;
-        P = Polynomial_2d(n);
+        P = Polynomial_3D(n);
 
         # Now, generate some coordinates.
         Num_Coords : int    = 50;

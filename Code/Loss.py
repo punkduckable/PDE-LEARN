@@ -65,7 +65,7 @@ def Data_Loss(
 def Coll_Loss(
         U           : Neural_Network,
         Xi          : torch.Tensor,
-        Inputs      : torch.Tensor,
+        Coll_Points : torch.Tensor,
         Derivatives : List[Derivative],
         LHS_Term    : Term,
         RHS_Terms   : List[Term],
@@ -83,11 +83,11 @@ def Coll_Loss(
     Xi: A trainable (requires_grad = True) torch 1D tensor. If there are N
     RHS_Terms, this should be an N element vector.
 
-    Inputs: B by n column tensor, where B is the number of coordinates and
-    n is the dimension of the problem domain. The ith row of Inputs should
-    hold the components of the ith input.
+    Coll_Points: B by n column tensor, where B is the number of coordinates and
+    n is the dimension of the problem domain. The ith row of Coll_Points should
+    hold the components of the ith collocation points.
 
-    Derivatives: We try to solve a PDE of the form
+    Derivatives: We try to learn a PDE of the form
             T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
     where each T_k is a "Term" of the form
             T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
@@ -107,7 +107,7 @@ def Coll_Loss(
     Returns:
 
     A tuple. The first entry of the tuple is a scalar tensor whose lone element
-    contains the mean square collocation loss at the Inputs. The second is a
+    contains the mean square collocation loss at the Coll_Points. The second is a
     1D tensor whose ith entry holds the PDE residual at the ith collocation
     point. You can safely discard the second return variable if you just want
     to get the loss. """
@@ -115,8 +115,11 @@ def Coll_Loss(
     # Make sure Xi's length matches RHS_Terms'.
     assert(torch.numel(Xi) == len(RHS_Terms));
 
-    # First, evaluate U at the Inputs.
-    U_Coords : torch.Tensor = U(Inputs).view(-1);
+    # Make sure Coll_Points requires grad.
+    Coll_Points.requires_grad_(True);
+
+    # First, evaluate U at the Coll_Points.
+    U_Coords : torch.Tensor = U(Coll_Points).view(-1);
 
 
 
@@ -144,7 +147,7 @@ def Coll_Loss(
                                         Da      = D_j,
                                         Db      = D_i,
                                         Db_U    = D_U_Dict[tuple(D_i.Encoding)],
-                                        Coords  = Inputs).view(-1);
+                                        Coords  = Coll_Points).view(-1);
 
 
                 # Store the result in the dictionary.
@@ -164,7 +167,7 @@ def Coll_Loss(
                                     Da      = D_j,
                                     Db      = I,
                                     Db_U    = U_Coords,
-                                    Coords  = Inputs).view(-1);
+                                    Coords  = Coll_Points).view(-1);
 
             # Store the result in the dictionary.
             D_U_Dict[tuple(D_j.Encoding)] = D_j_U;

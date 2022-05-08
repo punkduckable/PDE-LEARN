@@ -28,15 +28,15 @@ from Points     import Generate_Points;
 from Evaluate_Derivatives import Derivative_From_Derivative;
 
 # Other test file.
-from Polynomials import Polynomial_1d, Polynomial_2d;
+from Polynomials import Polynomial_2D, Polynomial_3D;
 
 
 
 class Loss_Test(unittest.TestCase):
-    def test_Coll_Loss_1D(self):
+    def test_Coll_Loss_2D(self):
         # Set up U to be a 1d polynomial.
         n : int = 4;
-        P       = Polynomial_1d(n);
+        P       = Polynomial_2D(n);
 
         # Generate some collocation coordinates.
         Bounds = numpy.array(  [[0 , 1],
@@ -78,18 +78,18 @@ class Loss_Test(unittest.TestCase):
         Dx2_P       = Derivative_From_Derivative(Da = Dx2, Db = Dx,  Db_U = Dx_P,     Coords = Coords).view(-1);
         Dx3_P       = Derivative_From_Derivative(Da = Dx3, Db = Dx2, Db_U = Dx2_P,    Coords = Coords).view(-1);
 
-        # For this test, Xi will be a vector of ones.
-        Xi = torch.ones(5, dtype = torch.float32);
+        # For this test, Xi will be a random vector.
+        Xi = torch.rand(5, dtype = torch.float32);
 
         # Calculate b(U) predicted.
         b_U_Pred    = Dt_P;
 
         # Calculate L(U)Xi predicted.
-        L_U_Xi_Pred =  (torch.pow(P_Coords, 4) +
-                        torch.pow(Dx_P,     3) +
-                        torch.pow(Dx2_P,    2) +
-                        Dx3_P +
-                        torch.multiply(P_Coords, torch.pow(Dx_P, 2)));
+        L_U_Xi_Pred =  (Xi[0]*torch.pow(P_Coords, 4) +
+                        Xi[1]*torch.pow(Dx_P,     3) +
+                        Xi[2]*torch.pow(Dx2_P,    2) +
+                        Xi[3]*Dx3_P +
+                        Xi[4]*torch.multiply(P_Coords, torch.pow(Dx_P, 2)));
 
         # Calculated predicted loss (mean square residual).
         Loss_Pred = torch.mean(torch.pow(torch.subtract(b_U_Pred, L_U_Xi_Pred), 2));
@@ -101,7 +101,7 @@ class Loss_Test(unittest.TestCase):
 
         Loss_Actual = Coll_Loss(    U               = P,
                                     Xi              = Xi,
-                                    Inputs          = Coords,
+                                    Coll_Points     = Coords,
                                     Derivatives     = Derivatives,
                                     LHS_Term        = LHS_Term,
                                     RHS_Terms       = RHS_Terms)[0];
@@ -109,10 +109,10 @@ class Loss_Test(unittest.TestCase):
         self.assertEqual(Loss_Actual.item(), Loss_Pred.item());
 
     """
-    def test_Coll_Loss_2D(self):
+    def test_Coll_Loss_3D(self):
         # Set up U to be a 2d polynomial.
         n : int = 3;
-        U_Poly = Polynomial_2d(n);
+        U_Poly = Polynomial_3D(n);
 
         # Generate some collocation coordinates.
         Bounds = numpy.array(  [[0 , 1],
