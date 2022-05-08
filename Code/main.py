@@ -24,7 +24,6 @@ from Network            import Rational, Neural_Network;
 from Test_Train         import Testing, Training;
 from Loss               import Data_Loss, Lp_Loss, Coll_Loss;
 from Points             import Generate_Points;
-from Xi                 import Print_PDE;
 
 
 
@@ -254,9 +253,20 @@ def main():
     ############################################################################
     # Report final PDE
 
-    Print_PDE(  Xi          = Pruned_Xi,
-                LHS_Term    = Settings.LHS_Term,
-                RHS_Terms   = Settings.RHS_Terms);
+    # Print the LHS Term.
+    print(Settings.LHS_Term, end = '');
+    print(" = ");
+
+    # Print the RHS terms
+    for i in range(len(Settings.RHS_Terms)):
+        if(Pruned_Xi[i] != 0):
+            if(i != 0):
+                print(" + ", end = '');
+            print("%7.4f" % Pruned_Xi[i], end = '');
+            print(Settings.RHS_Terms[i], end = '');
+
+    # End the line.
+    print();
 
 
     ############################################################################
