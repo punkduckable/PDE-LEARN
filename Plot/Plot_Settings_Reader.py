@@ -6,7 +6,7 @@ import sys
 # Get path to Reader directory.
 Main_Path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
 Code_Path       = os.path.join(Main_Path, "Code");
-Readers_Path    = os.path.join(Code_path, "Readers");
+Readers_Path    = os.path.join(Code_Path, "Readers");
 
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Readers_Path);
@@ -14,6 +14,7 @@ sys.path.append(Readers_Path);
 import torch;
 
 from File_Reader    import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
+from Library_Reader import Read_Library;
 
 
 
@@ -74,16 +75,16 @@ def Settings_Reader() -> Settings_Container:
 
 
     ############################################################################
-    # PDE settings.
+    # Library Settings.
 
-    # What is the order of the time derivative in the PDE?
-    Settings.Time_Derivative_Order      = int(Read_Setting(File, "Time Derivative Order [int]:"));
+    # Where is the file that lists the library functions / derivatives?
+    Library_File_Name : str             = Read_Setting(File, "Library File [str]:");
+    Library_Path      : str             = "../" + Library_File_Name + ".txt";
+    Derivatives, LHS_Term, RHS_Terms    = Read_Library(Library_Path);
 
-    # What is the highest order spatial derivative in the PDE?
-    Settings.Max_Spatial_Derivatives    = int(Read_Setting(File, "Highest order spatial derivative of U [int]:"));
-
-    # What is the maximum polynomial degree?
-    Settings.Maximum_Term_Degree        = int(Read_Setting(File, "Maximum Polynomial Term Degree [int]:"));
+    Settings.Derivatives    = Derivatives;
+    Settings.LHS_Term       = LHS_Term;
+    Settings.RHS_Terms      = RHS_Terms;
 
 
     ############################################################################
