@@ -324,13 +324,6 @@ def Settings_Reader() -> Settings_Container:
 
 
     ############################################################################
-    # Threshold Settings.
-
-    Settings.Threshold = float(Read_Setting(File, "Threshold [float]:"));
-
-
-
-    ############################################################################
     # Optimizer settings.
 
     # Read the optimizer type.

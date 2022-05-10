@@ -31,7 +31,21 @@ def main():
     # Load the settings, print them.
     Settings = Settings_Reader();
     for (Setting, Value) in Settings.__dict__.items():
-        print(("%-25s = " % Setting) + str(Value));
+        print("%-25s = " % Setting, end = '');
+
+        # Check if Value is a List.
+        if(isinstance(Value, list)):
+            # If so, print the list items one at a time.
+            for i in range(len(Value)):
+                print(Value[i], end = '');
+                if(i != len(Value) - 1):
+                    print(", ", end = '');
+                else:
+                    print();
+
+        # Otherwise, print the value.
+        else:
+            print(str(Value));
 
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
@@ -228,7 +242,7 @@ def main():
             print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
                 % (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss, Train_Data_Loss + Train_Coll_Loss + Train_Lp_Loss));
         else:
-            print("Epoch #%-4d | Targeted %3d \t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
+            print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
     print("Done! It took %7.2fs," % Epoch_Runtime);
@@ -238,13 +252,27 @@ def main():
     ############################################################################
     # Threshold Xi.
 
-    # Cycle through components of Xi. Remove all whose magnitude is smaller
-    # than the threshold.
+    # Recall how we enforce Xi: We trick torch into minimizing
+    #       [Xi]_1^p + ... + [Xi]_n^p,
+    # which is highly concave (for p < 1), by instead minimizing
+    #       w_1[Xi]_1^2 + ... + w_n[Xi]_n^2,
+    # where each w_i is updated each step to be w_i = [Xi]_i^{2 - p}. The above
+    # is convex (if we treat w_1, ... , w_n as constants). There is, however, a
+    # problem. If [Xi]_i is smaller than about 3e-4, then [Xi]_i^2 is roughly
+    # machine epilon, meaning we run into problems. To aboid this, we instead
+    # define
+    #       w_i = max{1e-7, [Xi]_i^{p - 2}}.
+    # The issue with this approach is that the Lp loss can't really resolve
+    # components of Xi which are smaller than about 3e-4. To deal with this, we
+    # ignore all components smaller than 5e-4.
+    #
+    # Note: Switching to double precision would allow us to drop this number
+    # further.
     Pruned_Xi = torch.empty_like(Xi);
     N   : int = Xi.numel();
     for k in range(N):
         Abs_Xi_k = abs(Xi[k].item());
-        if(Abs_Xi_k < Settings.Threshold):
+        if(Abs_Xi_k < 5e-4):
             Pruned_Xi[k] = 0;
         else:
             Pruned_Xi[k] = Xi[k];

@@ -261,7 +261,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
     # First, square the components of Xi. Also, make a doule precision copy of
     # Xi that is detached from Xi's graph.
-    delta : float = .000001;
+    delta : float = .0000001;
     Xi_2          = torch.mul(Xi, Xi);
     Xi_Detach     = torch.detach(Xi);
 
