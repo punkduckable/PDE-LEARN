@@ -3,13 +3,13 @@
 
 # Where are the state_dict's for the networks we want to plot? (The plot we
 # generate will have the same name)
-Load File Name [str]:                            Allen_Cahn_N25_P5000_Tanh_Adam
+Load File Name [str]:                            Allen_Cahn_N75_P5000_Rat_Adam
 
 # What is the architecture of the solution network? (this must match the
 # architecture of the saved network or pytorch will throw an error)
 Number of Hidden Layers [int]:                   5
 Hidden Units per Hidden Layer [int]:             50
-Activation Function [Tanh, Rational, Sin]:       Tanh
+Activation Function [Tanh, Rational, Sin]:       Rat
 
 # Where is the Library of terms? This must be the same library we used to
 # train the network. This should be a file in the main directory (omit the
