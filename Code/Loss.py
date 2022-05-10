@@ -1,13 +1,23 @@
+# Nonsense to add Readers, Classes directories to the Python search path.
+import os
+import sys
+
+# Get path to Code, Readers, Classes directories.
+Code_Path       = os.path.dirname(os.path.abspath(__file__));
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Readers, Classes directories to the python path.
+sys.path.append(Classes_Path);
+
 import  numpy;
 import  torch;
 import  math;
-from    typing import Tuple;
+from    typing import Tuple, List;
 
-from Network  import    Neural_Network;
-from Mappings import    x_Derivatives_to_Index, xy_Derivatives_to_Index, \
-                        Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
-                        Col_Number_to_Multi_Index_Class;
-from Evaluate_Derivatives import Evaluate_Derivatives;
+from Derivative             import Derivative;
+from Term                   import Term;
+from Network                import Neural_Network;
+from Evaluate_Derivatives   import Derivative_From_Derivative;
 
 
 
@@ -53,19 +63,17 @@ def Data_Loss(
 
 
 def Coll_Loss(
-        U                                   : Neural_Network,
-        Xi                                  : torch.Tensor,
-        Coll_Points                         : torch.Tensor,
-        Time_Derivative_Order               : int,
-        Highest_Order_Spatial_Derivatives   : int,
-        Index_to_Derivatives,
-        Col_Number_to_Multi_Index,
-        Device                              : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
-    """ Let L(U) denote the library matrix (i,j entry is the jth library term
-    evaluated at the ith collocation point. Note that we define the last library
-    term as the constant function 1). Further, let b(U) denote the vector whose
-    ith entry is the time derivative of U at the ith collocation point. Then
-    this function returns ||b(N) - L(U)Xi||_2
+        U           : Neural_Network,
+        Xi          : torch.Tensor,
+        Coll_Points : torch.Tensor,
+        Derivatives : List[Derivative],
+        LHS_Term    : Term,
+        RHS_Terms   : List[Term],
+        Device      : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
+    """ Let L(U) denote the library matrix (i,j entry is the jth RHS term
+    evaluated at the ith collocation point. Further, let b(U) denote the vector
+    whose ith entry is the LHS Term at the ith collocation point. Then
+    this function returns ||b(U) - L(U)Xi||_2
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -73,29 +81,25 @@ def Coll_Loss(
     U: The Neural Network that approximates the solution.
 
     Xi: A trainable (requires_grad = True) torch 1D tensor. If there are N
-    distinct multi-indices, then this should be an N+1 element tensor (the first
-    N components are for the library terms represented by multi-indices, the
-    final one is for a constant term).
+    RHS_Terms, this should be an N element vector.
 
-    Coll_Points: A 2 or 3 column tensor of coordinates. If
-    Num_Spatial_Dimensions = 1, then the ith row of this tensor holds the
-    (t, x) coordinates of the ith collocation point. If Num_Spatial_Dimensions
-    = 2, then the ith row of this tensor holds the (t, x, y) coordiante of the
-    ith collocation point.
+    Coll_Points: B by n column tensor, where B is the number of coordinates and
+    n is the dimension of the problem domain. The ith row of Coll_Points should
+    hold the components of the ith collocation points.
 
-    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
-    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+    Derivatives: We try to learn a PDE of the form
+            T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
+    where each T_k is a "Term" of the form
+            T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
+    where each D_j is a derivative operator and p(j) >= 1. Derivatives is a list
+    that contains each D_j's in each term in the equation above. This list
+    should be ordered according to the Derivatives' orders (see Derivative
+    class).
 
-    Highest_Order_Spatial_Derivatives: The highest order derivatives in our
-    library terms. We need to know this to evaluate the spatial partial
-    derivatives of Xi and, subsequently, evaluate the library terms.
+    LHS_Term : A Term object representing T_0 in the equation above.
 
-    Index_to_Derivatives: If Num_Spatial_Dimensions = 1, then this maps a
-    sub-index value to a number of x derivatives. If Num_Spatial_Dimensions = 2,
-    then this maps a sub-index value to a number of x and y derivatives.
-
-    Col_Number_to_Multi_Index: This maps column numbers (library term numbers)
-    to Multi-Indices.
+    RHS_Terms : A list of Term objects whose ith entry represents T_i in the
+    equation above.
 
     Device: The device (gpu or cpu) that we train on.
 
@@ -103,121 +107,132 @@ def Coll_Loss(
     Returns:
 
     A tuple. The first entry of the tuple is a scalar tensor whose lone element
-    contains the mean square collocation loss at the Coords. The second is a
+    contains the mean square collocation loss at the Coll_Points. The second is a
     1D tensor whose ith entry holds the PDE residual at the ith collocation
     point. You can safely discard the second return variable if you just want
     to get the loss. """
 
-    # First, determine the number of spatial dimensions. Sice U is a function
-    # of t and x, or t and x, y, this is just one minus the input dimension of
-    # U.
-    Num_Spatial_Dimensions : int = U.Input_Dim - 1;
+    # Make sure Xi's length matches RHS_Terms'.
+    assert(torch.numel(Xi) == len(RHS_Terms));
+
+    # Make sure Coll_Points requires grad.
+    Coll_Points.requires_grad_(True);
+
+    # First, evaluate U at the Coll_Points.
+    U_Coords : torch.Tensor = U(Coll_Points).view(-1);
 
 
-    # This code behaves differently for 1 and 2 spatial variables.
-    if(Num_Spatial_Dimensions == 1):
-        # First, acquire the spatial and time derivatives of U.
-        (Dtn_U, Dxn_U) = Evaluate_Derivatives(
-                            U                                   = U,
-                            Time_Derivative_Order               = Time_Derivative_Order,
-                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                            Coords                              = Coll_Points,
-                            Device                              = Device);
 
-        # Construct our approximation to Dtn_U. To do this, we cycle through
-        # the columns of the library. At each column, we construct the term
-        # and then multiply it by the corresponding component of Xi. We then add
-        # the result to a running total.
-        Library_Xi_Product = torch.zeros_like(Dtn_U);
+    ############################################################################
+    # Form a dictionary housing D_j U, for each derivative D_j in Derivatives.
 
-        # First, determine the number of columns.
-        Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
-        for i in range(Total_Indices):
-            # First, obtain the Multi_Index associated with this column number.
-            Multi_Index     = Col_Number_to_Multi_Index(i);
-            Num_Sub_Indices = Multi_Index.size;
+    # Initialize
+    D_U_Dict : Dict[Derivative] = {};
 
-            # Initialize an array for ith library term. Since we construct this
-            # via multiplication, this needs to initialized to a tensor of 1's.
-            ith_Lib_Term = torch.ones_like(Dtn_U);
+    # Cycle through the derivatives.
+    for j in range(len(Derivatives)):
+        # Fetch D_j.
+        D_j : Derivative = Derivatives[j];
 
-            # Now, cycle through the indices in this multi-index.
-            for j in range(Num_Sub_Indices):
-                # First, identify the jth sub-index. This value tells us which
-                # entry of Dxn_U holds the derivative corresponding to this
-                # sub-index.
-                Col : int = Multi_Index[j];
+        # Check if we can compute D_j from any of the derivatives of U that
+        # we've already computed.
+        for i in range(j, 0):
+            # Get the ith derivative.
+            D_i : Derivative = Derivatives[i];
 
-                # Now multiply the ith library term by the corresponding
-                # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxn_U[Col]);
+            # Check if D_i is a child of D_j.
+            if(D_i.Is_Child_Of(D_j)):
+                # If so, compute D_j U from D_i U.
+                D_j_U : torch.Tensor = Derivative_From_Derivative(
+                                        Da      = D_j,
+                                        Db      = D_i,
+                                        Db_U    = D_U_Dict[tuple(D_i.Encoding)],
+                                        Coords  = Coll_Points).view(-1);
 
-            # Multiply the ith_Lib_Term by the ith component of Xi and add the
-            # result to the Library_Xi product.
-            Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
 
-        # Finally, add on the constant term (the final component of Xi!)
-        Ones_Col = torch.ones_like(Dtn_U);
-        Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
+                # Store the result in the dictionary.
+                D_U_Dict[tuple(D_j.Encoding)] = D_j_U;
 
-        # Now, compute the pointwise residual between Dtn_U and the
-        # Library_Xi_Product.
-        Residual    : torch.Tensor  = torch.subtract(Dtn_U, Library_Xi_Product);
+                # Break!
+                break;
+        else:
+            # This runs if we do not encounter break in the for loop above.
+            # If we end up here, then we can not calculate D_j U from a
+            # derivative that we already computed. In this case, we must compute
+            # D_j U from U_Coords.
+            I : Derivative = Derivative(Encoding = numpy.array([0, 0]));
 
-        # Return the mean square error, as well as the collocation loss at each
-        # point.
-        return ((Residual**2).mean(), Residual);
+            # Compute D_j U.
+            D_j_U : torch.Tensor = Derivative_From_Derivative(
+                                    Da      = D_j,
+                                    Db      = I,
+                                    Db_U    = U_Coords,
+                                    Coords  = Coll_Points).view(-1);
 
-    elif(Num_Spatial_Dimensions == 2):
-        # First, acquire the spatial and time derivatives of U.
-        (Dtn_U, Dxyn_U) = Evaluate_Derivatives(
-                            U                                   = U,
-                            Time_Derivative_Order               = Time_Derivative_Order,
-                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                            Coords                              = Coll_Points,
-                            Device                              = Device);
+            # Store the result in the dictionary.
+            D_U_Dict[tuple(D_j.Encoding)] = D_j_U;
 
-        # Construct our approximation to Dtn_U. To do this, we cycle through
-        # the columns of the library. At each column, we construct the term
-        # and then multiply it by the corresponding component of Xi. We then add
-        # the result to a running total.
-        Library_Xi_Product = torch.zeros_like(Dtn_U);
 
-        Total_Indices = Col_Number_to_Multi_Index.Total_Indices;
-        for i in range(Total_Indices):
-            # First, obtain the Multi_Index associated with this column number.
-            Multi_Index     = Col_Number_to_Multi_Index(i);
-            Num_Sub_Indices = Multi_Index.size;
 
-            # Initialize an array for ith library term. Since we construct this
-            # via multiplication, this needs to initialized to a tensor of 1's.
-            ith_Lib_Term = torch.ones_like(Dtn_U);
+    ############################################################################
+    # Construct b(U) (see doc string).
 
-            # Now, cycle through the indices in this multi-index.
-            for j in range(Num_Sub_Indices):
-                # First, identify the jth sub-index. This value tells us which
-                # entry of Dxyn_U holds the derivative corresponding to this
-                # sub-index.
-                Col : int = Multi_Index[j];
+    # Initialize b_U to a vector of all ones.
+    b_U : torch.Tensor = torch.ones_like(U_Coords);
 
-                # Now multiply the ith library term by the corresponding
-                # derivative of U.
-                ith_Lib_Term = torch.mul(ith_Lib_Term, Dxyn_U[Col]);
+    # Cycle through the sub-terms of the LHS Term.
+    for i in range(LHS_Term.Num_Sub_Terms):
+        # First, fetch the sub-term's derivative, power.
+        Di : Derivative = LHS_Term.Derivatives[i];
+        pi : int        = LHS_Term.Powers[i];
 
-            # Multiply the ith_Lib_Term by the ith component of Xi and add the
-            # result to the Library_Xi product.
-            Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(ith_Lib_Term, Xi[i]));
+        # Next, fetch its value from the dictionary.
+        Di_U : torch.Tensor = D_U_Dict[tuple(Di.Encoding)];
 
-        # Finally, add on the constant term (the final component of Xi!)
-        Ones_Col = torch.ones_like(Dtn_U);
-        Library_Xi_Product = torch.add(Library_Xi_Product, torch.mul(Ones_Col, Xi[Total_Indices]));
+        # Raise it to the sub term's power.
+        Di_U_pi : torch.Tensor = torch.pow(Di_U, pi);
 
-        # Now, compute the pointwise residual between Dtn_U and the
-        # Library_Xi_Product.
-        Residual    : torch.Tensor  = torch.subtract(Dtn_U, Library_Xi_Product);
+        # Accumulate D_i_U into b_U.
+        b_U = torch.multiply(b_U, Di_U_pi);
 
-        # Return the mean square error.
-        return ((Residual**2).mean(), Residual);
+
+
+    ############################################################################
+    # Construct L(U)*Xi (see doc string).
+
+    L_U_Xi : torch.Tensor = torch.zeros_like(b_U);
+
+    # Cycle through the RHS Terms.
+    for j in range(len(RHS_Terms)):
+        # Get the term.
+        T_j     : Term          = RHS_Terms[j];
+
+        # Initialize a tensor to hold T_j(U).
+        T_j_U   : torch.Tesnor  = torch.ones_like(U_Coords);
+
+        # Cycle through T_j's sub-terms.
+        for i in range(T_j.Num_Sub_Terms):
+            # First, fetch the derivative, power for T_j's ith sub-term.
+            Di : Derivative = T_j.Derivatives[i];
+            pi : int        = T_j.Powers[i];
+
+            # Next, fetch its value from the dictionary.
+            Di_U : torch.Tensor = D_U_Dict[tuple(Di.Encoding)];
+
+            # Raise it to the sub term's power.
+            Di_U_pi : torch.Tensor = torch.pow(Di_U, pi);
+
+            # Accumulate D_i_U into T_j_U.
+            T_j_U = torch.multiply(T_j_U, Di_U_pi);
+
+        # Accumulate T_j_U*Xi[j] into L_U_Xi.
+        L_U_Xi += torch.multiply(T_j_U, Xi[j]);
+
+    # Now, compute the residual, b(U) - L(U)Xi.
+    Residual : torch.Tensor = torch.subtract(b_U, L_U_Xi);
+
+    # Return the mean square residual (Collocation Loss), and the residual.
+    return ((Residual**2).mean(), Residual);
 
 
 
@@ -246,7 +261,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
     # First, square the components of Xi. Also, make a doule precision copy of
     # Xi that is detached from Xi's graph.
-    delta : float = .000001;
+    delta : float = .0000001;
     Xi_2          = torch.mul(Xi, Xi);
     Xi_Detach     = torch.detach(Xi);
 

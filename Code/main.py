@@ -1,18 +1,29 @@
-import numpy;
-import torch;
-import time;
+# Nonsense to add Readers, Classes directories to the Python search path.
+import os
+import sys
 
-from Settings_Reader import Settings_Reader, Settings_Container;
-from Mappings import    Index_to_xy_Derivatives_Class, Index_to_x_Derivatives, \
-                        Num_Sub_Index_Values_1D, Num_Sub_Index_Values_2D, \
-                        Max_Col_Num, \
-                        Col_Number_to_Multi_Index_Class;
-from Loss           import Data_Loss, Lp_Loss, Coll_Loss;
-from Network        import Rational, Neural_Network;
-from Data_Loader    import Data_Loader;
-from Test_Train     import Testing, Training;
-from Points         import Generate_Points;
-from Xi             import Print_PDE;
+# Get path to Code, Readers, Classes directories.
+Code_Path       = os.path.dirname(os.path.abspath(__file__));
+Readers_Path    = os.path.join(Code_Path, "Readers");
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Readers, Classes directories to the python path.
+sys.path.append(Readers_Path);
+sys.path.append(Classes_Path);
+
+import  numpy;
+import  torch;
+import  time;
+from    typing import List;
+
+from Settings_Reader    import Settings_Reader, Settings_Container;
+from Data_Loader        import Data_Loader;
+from Derivative         import Derivative;
+from Term               import Term;
+from Network            import Rational, Neural_Network;
+from Test_Train         import Testing, Training;
+from Loss               import Data_Loss, Lp_Loss, Coll_Loss;
+from Points             import Generate_Points;
 
 
 
@@ -20,7 +31,21 @@ def main():
     # Load the settings, print them.
     Settings = Settings_Reader();
     for (Setting, Value) in Settings.__dict__.items():
-        print(("%-25s = " % Setting) + str(Value));
+        print("%-25s = " % Setting, end = '');
+
+        # Check if Value is a List.
+        if(isinstance(Value, list)):
+            # If so, print the list items one at a time.
+            for i in range(len(Value)):
+                print(Value[i], end = '');
+                if(i != len(Value) - 1):
+                    print(", ", end = '');
+                else:
+                    print();
+
+        # Otherwise, print the value.
+        else:
+            print(str(Value));
 
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
@@ -40,23 +65,8 @@ def main():
     # Get the number of input dimensions.
     Settings.Num_Spatial_Dimensions : int = Data_Container.Input_Bounds.shape[0] - 1;
 
-
-    ############################################################################
-    # Determine the number of index values, library terms.
-
-    # Determine how many index values we can have. This value will be important
-    # going forward.
-    Num_Sub_Index_Values : int = 0;
-    if(Settings.Num_Spatial_Dimensions == 1):
-        Num_Sub_Index_Values = Num_Sub_Index_Values_1D(Settings.Highest_Order_Spatial_Derivatives);
-    if(Settings.Num_Spatial_Dimensions == 2):
-        Num_Sub_Index_Values = Num_Sub_Index_Values_2D(Settings.Highest_Order_Spatial_Derivatives);
-
-
-    # Now, determine how many library terms we have. This will determine the
-    # size of Xi.
-    Num_Library_Terms : int = Max_Col_Num(Max_Sub_Indices      = Settings.Maximum_Term_Degree,
-                                          Num_Sub_Index_Values = Num_Sub_Index_Values);
+    # Now, determine how many library terms we have. This determines Xi's size.
+    Num_Library_Terms : int = len(Settings.RHS_Terms)
 
 
     ############################################################################
@@ -77,18 +87,10 @@ def main():
     # we can distinguish it from regular Tensors. In particular, optimizers
     # expect a list or dictionary of Parameters... not Tensors. Since we want
     # to train Xi, we set it up as a Parameter.
-    Xi = torch.zeros(   Num_Library_Terms + 1,
+    Xi = torch.zeros(   Num_Library_Terms,
                         dtype           = torch.float32,
                         device          = Settings.Device,
                         requires_grad   = True);
-
-
-    ############################################################################
-    # Set up the Col_Number_to_Multi_Index map.
-
-    Col_Number_to_Multi_Index = Col_Number_to_Multi_Index_Class(
-                                    Max_Sub_Indices      = Settings.Maximum_Term_Degree,
-                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
 
 
     ############################################################################
@@ -140,16 +142,6 @@ def main():
             param_group['lr'] = Settings.Learning_Rate;
 
 
-
-    ############################################################################
-    # Set up Index_to_Derivatives.
-
-    if(Settings.Num_Spatial_Dimensions == 1):
-        Index_to_Derivatives = Index_to_x_Derivatives;
-    if(Settings.Num_Spatial_Dimensions == 2):
-        Index_to_Derivatives = Index_to_xy_Derivatives_Class(
-                                        Highest_Order_Derivatives   = Settings.Highest_Order_Spatial_Derivatives);
-
     # Setup is now complete. Report time.
     print("Done! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
 
@@ -176,20 +168,18 @@ def main():
         Train_Coll_Points : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
 
         # Now run a Training Epoch. Keep track of the residual.
-        Residual = Training(
-                    U                                   = U,
-                    Xi                                  = Xi,
-                    Coll_Points                         = Train_Coll_Points,
-                    Inputs                              = Data_Container.Train_Inputs,
-                    Targets                             = Data_Container.Train_Targets,
-                    Time_Derivative_Order               = Settings.Time_Derivative_Order,
-                    Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
-                    Index_to_Derivatives                = Index_to_Derivatives,
-                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                    p                                   = Settings.p,
-                    Lambda                              = Settings.Lambda,
-                    Optimizer                           = Optimizer,
-                    Device                              = Settings.Device);
+        Residual = Training(    U           = U,
+                                Xi          = Xi,
+                                Coll_Points = Train_Coll_Points,
+                                Inputs      = Data_Container.Train_Inputs,
+                                Targets     = Data_Container.Train_Targets,
+                                Derivatives = Settings.Derivatives,
+                                LHS_Term    = Settings.LHS_Term,
+                                RHS_Terms   = Settings.RHS_Terms,
+                                p           = Settings.p,
+                                Lambda      = Settings.Lambda,
+                                Optimizer   = Optimizer,
+                                Device      = Settings.Device);
 
         # Find the Absolute value of the residuals. Isolate those corresponding
         # to the "random" collocation points.
@@ -203,7 +193,7 @@ def main():
 
         # Determine which collocation points have residuals that are more than
         # 2 STD above the mean.
-        Cutoff                  : float         = Residual_Mean + 2*Residual_SD
+        Cutoff                  : float         = Residual_Mean + 3*Residual_SD
         Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
 
         # Keep the corresponding collocation points.
@@ -220,33 +210,31 @@ def main():
 
             # Evaluate losses on training points.
             (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss) = Testing(
-                U                                   = U,
-                Xi                                  = Xi,
-                Coll_Points                         = Train_Coll_Points,
-                Inputs                              = Data_Container.Train_Inputs,
-                Targets                             = Data_Container.Train_Targets,
-                Time_Derivative_Order               = Settings.Time_Derivative_Order,
-                Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
-                Index_to_Derivatives                = Index_to_Derivatives,
-                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                p                                   = Settings.p,
-                Lambda                              = Settings.Lambda,
-                Device                              = Settings.Device);
+                U           = U,
+                Xi          = Xi,
+                Coll_Points = Train_Coll_Points,
+                Inputs      = Data_Container.Train_Inputs,
+                Targets     = Data_Container.Train_Targets,
+                Derivatives = Settings.Derivatives,
+                LHS_Term    = Settings.LHS_Term,
+                RHS_Terms   = Settings.RHS_Terms,
+                p           = Settings.p,
+                Lambda      = Settings.Lambda,
+                Device      = Settings.Device);
 
             # Evaluate losses on the testing points.
             (Test_Data_Loss, Test_Coll_Loss, Test_Lp_Loss) = Testing(
-                U                                   = U,
-                Xi                                  = Xi,
-                Coll_Points                         = Test_Coll_Points,
-                Inputs                              = Data_Container.Test_Inputs,
-                Targets                             = Data_Container.Test_Targets,
-                Time_Derivative_Order               = Settings.Time_Derivative_Order,
-                Highest_Order_Spatial_Derivatives   = Settings.Highest_Order_Spatial_Derivatives,
-                Index_to_Derivatives                = Index_to_Derivatives,
-                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                p                                   = Settings.p,
-                Lambda                              = Settings.Lambda,
-                Device                              = Settings.Device);
+                U           = U,
+                Xi          = Xi,
+                Coll_Points = Train_Coll_Points,
+                Inputs      = Data_Container.Test_Inputs,
+                Targets     = Data_Container.Test_Targets,
+                Derivatives = Settings.Derivatives,
+                LHS_Term    = Settings.LHS_Term,
+                RHS_Terms   = Settings.RHS_Terms,
+                p           = Settings.p,
+                Lambda      = Settings.Lambda,
+                Device      = Settings.Device);
 
             # Print losses!
             print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
@@ -254,7 +242,7 @@ def main():
             print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
                 % (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss, Train_Data_Loss + Train_Coll_Loss + Train_Lp_Loss));
         else:
-            print("Epoch #%-4d | Targeted %3d \t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
+            print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
     print("Done! It took %7.2fs," % Epoch_Runtime);
@@ -264,13 +252,27 @@ def main():
     ############################################################################
     # Threshold Xi.
 
-    # Cycle through components of Xi. Remove all whose magnitude is smaller
-    # than the threshold.
+    # Recall how we enforce Xi: We trick torch into minimizing
+    #       [Xi]_1^p + ... + [Xi]_n^p,
+    # which is highly concave (for p < 1), by instead minimizing
+    #       w_1[Xi]_1^2 + ... + w_n[Xi]_n^2,
+    # where each w_i is updated each step to be w_i = [Xi]_i^{2 - p}. The above
+    # is convex (if we treat w_1, ... , w_n as constants). There is, however, a
+    # problem. If [Xi]_i is smaller than about 3e-4, then [Xi]_i^2 is roughly
+    # machine epilon, meaning we run into problems. To aboid this, we instead
+    # define
+    #       w_i = max{1e-7, [Xi]_i^{p - 2}}.
+    # The issue with this approach is that the Lp loss can't really resolve
+    # components of Xi which are smaller than about 3e-4. To deal with this, we
+    # ignore all components smaller than 5e-4.
+    #
+    # Note: Switching to double precision would allow us to drop this number
+    # further.
     Pruned_Xi = torch.empty_like(Xi);
     N   : int = Xi.numel();
     for k in range(N):
         Abs_Xi_k = abs(Xi[k].item());
-        if(Abs_Xi_k < Settings.Threshold):
+        if(Abs_Xi_k < 5e-4):
             Pruned_Xi[k] = 0;
         else:
             Pruned_Xi[k] = Xi[k];
@@ -279,11 +281,20 @@ def main():
     ############################################################################
     # Report final PDE
 
-    Print_PDE(  Xi                        = Pruned_Xi,
-                Time_Derivative_Order     = Settings.Time_Derivative_Order,
-                Num_Spatial_Dimensions    = Settings.Num_Spatial_Dimensions,
-                Index_to_Derivatives      = Index_to_Derivatives,
-                Col_Number_to_Multi_Index = Col_Number_to_Multi_Index);
+    # Print the LHS Term.
+    print(Settings.LHS_Term, end = '');
+    print(" = ");
+
+    # Print the RHS terms
+    for i in range(len(Settings.RHS_Terms)):
+        if(Pruned_Xi[i] != 0):
+            if(i != 0):
+                print(" + ", end = '');
+            print("%7.4f" % Pruned_Xi[i], end = '');
+            print(Settings.RHS_Terms[i], end = '');
+
+    # End the line.
+    print();
 
 
     ############################################################################

@@ -1,0 +1,64 @@
+# This file defines the PDE that we search for. PDE-LEARN can identify
+# PDEs of the following form:
+#     T_0(U) = c_1 T_1(U) + ... + c_n T_n(U)
+# Here, U is the PDE solution (which depends on (t, x), (t, x, y), or
+# (t, x, y, z), depending on the number of PDE terms). F_0, ... , F_K are scalar
+# valued functions of U (NOT its derivatives). Each T_k is a "term", which is
+# an expression of the form
+#     T_k(u) = (D^{(1)} u)^{p(1)} (D^{(2)} u)^(p(2)} ... (D^{(n)} u)^{p(n)}.
+# Here, D^{(0)}, ... , D^{(n)} are partial derivative operators, and p(1), ... ,
+# p(n) are non-negative integers. We call an expression of the form
+# D^{(2)} u)^(p(2)}) a "sub-term". We call T_0 the "left-hand side term" or
+# "LHS Term" for short, and the terms T_1, ... , T_n the "right-hand side terms"
+# or "RHS terms" for short.
+#
+# This file specifies terms. Since the LHS term is special, we specify it
+# separately. Each term must go on a single line. Each term should be expressed
+# as a sequence of sub-terms, with a * between each sub-term (the * is
+# essential, as we use it to split each line).
+#
+# Each sub-term should be expressed as a derivative, followed by the letter "u"
+# or "U", all surrounded in a set of parenthesis, raised to a power. A
+# derivative should be expressed as a sequence of partial derivatives. Each
+# partial derivative should be of the form D_s (for first order derivatives) or
+# D_s^k (for higher order derivatives). There should be a space between each
+# partial derivative. For example, D_t D_x^2 D_y. The derivative should come
+# before the "u" or "U", with a space between the two. A carrot, ^, should
+# follow the closing parenthesis and immediately be followed by a non-negative
+# integer. If a sub-term's power is 1, you can drop the parenthesis and the ^1.
+# Thus, all three of the following represent the sub-term "U",
+#     U
+#     (U)
+#     (U)^1
+# The following means "second x partial and first y partial of U, raised to the
+# 4th power":
+#      (D_x^2 D_t U )^4
+# If a sub-term has no derivative (D^{(i)} = 1), then you simply do not list
+# one. For example, the following line specifies the sub-term U^2,
+#       (U)^2
+# Here is an example term which represents (dU/dx)*U,
+#     (D_x U)*(U)
+# The first term you specify is the LHS term. There can be blank lines,
+# comments, etc between terms. The only rules are that the terms adhere to the
+# format above and that there is at most one term per line.
+
+# LHS Term
+D_t U
+
+# RHS Terms
+U
+D_x U
+D_x^2 U
+D_x^3 U
+
+(U)^2
+(D_x U)*U
+(D_x^2 U)*U
+
+(U)^3
+(D_x U)*(U)^2
+(D_x^2 U)*U^2
+
+(U)^4
+(D_x U)*(U)^3
+(D_x^2 U)*(U)^3

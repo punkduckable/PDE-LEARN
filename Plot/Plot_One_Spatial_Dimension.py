@@ -6,24 +6,25 @@ import sys
 Main_Path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
 
 # Get the path to the Code, Classes directories.
-Code_path       = os.path.join(Main_Path, "Code");
+Code_Path       = os.path.join(Main_Path, "Code");
+Classes_Path    = os.path.join(Code_Path, "Classes");
 
 # Add them to the Python search path.
-sys.path.append(Code_path);
+sys.path.append(Code_Path);
+sys.path.append(Classes_Path);
 
 # Code files.
 from Network                import Neural_Network;
+from Derivative             import Derivative;
+from Term                   import Term;
 from Plot_Settings_Reader   import Settings_Reader, Settings_Container;
-from Evaluate_Derivatives   import Evaluate_Derivatives;
 from Loss                   import Coll_Loss;
-from Mappings               import Num_Sub_Index_Values_1D, Index_to_x_Derivatives, \
-                                   Col_Number_to_Multi_Index_Class, Max_Col_Num;
 
-import torch;
-import numpy;
-import scipy.io;
-import matplotlib.pyplot as pyplot;
-
+import  torch;
+import  numpy;
+import  scipy.io;
+from    typing  import List;
+import  matplotlib.pyplot as pyplot;
 
 
 
@@ -32,9 +33,9 @@ def Plot_U( Num_Hidden_Layers       : int,
             Activation_Function     : str,
             Device                  : torch.device,
             Load_File_Name          : str,
-            Time_Derivative_Order   : int,
-            Max_Spatial_Derivatives : int,
-            Maximum_Term_Degree     : int,
+            Derivatives             : Derivative,
+            LHS_Term                : Term,
+            RHS_Terms               : List[Term],
             t_Coords_Matrix         : numpy.ndarray,
             x_Coords_Matrix         : numpy.ndarray,
             Inputs                  : numpy.ndarray,
@@ -57,16 +58,19 @@ def Plot_U( Num_Hidden_Layers       : int,
 
     Load_File_Name: The Save file that contains the network paramaters + Xi.
 
-    Time_Derivative_Order: We assume an underlying PDE of the form
-            D_t^m U = \sum_{i = 1}^{N} c_i F_i(U, D_x U, ... , D_x^n U)
-    This setting is 'm'.
+    Derivatives: We try to learn a PDE of the form
+            T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
+    where each T_k is a "Term" of the form
+            T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
+    where each D_j is a derivative operator and p(j) >= 1. Derivatives is a list
+    that contains each D_j's in each term in the equation above. This list
+    should be ordered according to the Derivatives' orders (see Derivative
+    class).
 
-    Max_Spatial_Derivatives: 'n' in the equation above.
+    LHS_Term : A Term object representing T_0 in the equation above.
 
-    Maximum_Term_Degree: This determines the complexity of the F_i's in the
-    expression above. Each F_i is of the form \prod_{i = 0}^{n} (D_x^i U)^P(i),
-    where each P(i) is a natural number. We only allow terms for which
-    P(0) + ... + P(n) <= Maximum_Term_Degree.
+    RHS_Terms : A list of Term objects whose ith entry represents T_i in the
+    equation above.
 
     t_Coords_Matrix, x_coords_matrix: We evaluate U, the error, and the PDE
     Residual on a grid of coordinates. These arguments are matricies whose i,j
@@ -91,7 +95,7 @@ def Plot_U( Num_Hidden_Layers       : int,
     ############################################################################
     # Setup.
 
-    # First, set up the network.
+    # First, initialize U.
     U = Neural_Network(
             Num_Hidden_Layers   = Num_Hidden_Layers,
             Neurons_Per_Layer   = Units_Per_Layer,
@@ -100,15 +104,8 @@ def Plot_U( Num_Hidden_Layers       : int,
             Activation_Function = Activation_Function,
             Device              = Device);
 
-    # Next, set up Xi. First, Determine how many index values we can have. We
-    # will need this value to set up the map from columns to multi indicies.
-    Num_Sub_Index_Values = Num_Sub_Index_Values_1D(Max_Spatial_Derivatives);
-
-    # Determine how many library terms we have. This determines the size of Xi.
-    Num_Library_Terms : int = Max_Col_Num(Max_Sub_Indices      = Maximum_Term_Degree,
-                                          Num_Sub_Index_Values = Num_Sub_Index_Values);
-
-    Xi = torch.zeros(   Num_Library_Terms + 1,
+    # Next, intiailize Xi.
+    Xi = torch.zeros(   len(RHS_Terms),
                         dtype           = torch.float32,
                         device          = Device,
                         requires_grad   = True);
@@ -127,11 +124,6 @@ def Plot_U( Num_Hidden_Layers       : int,
     U_Coords    : torch.Tensor  = U(torch_Inputs).detach().view(-1);
     U_matrix    : numpy.ndarray = U_Coords.detach().numpy().reshape(Targets_Matrix.shape);
 
-    # Set up a map from column numbers to multi-indices.
-    Col_Number_to_Multi_Index = Col_Number_to_Multi_Index_Class(
-                                    Max_Sub_Indices      = Maximum_Term_Degree,
-                                    Num_Sub_Index_Values = Num_Sub_Index_Values);
-
     # Use the Coll_Loss function to obtain the PDE residual at the Inputs. We
     # do this in batches to conserve memory.
     Residual_Coords : torch.Tensor = torch.empty_like(U_Coords);
@@ -140,25 +132,23 @@ def Plot_U( Num_Hidden_Layers       : int,
     Num_Batches : int = Num_Coords // 1000;
     for i in range(Num_Batches):
         Residual_Coords[i*1000 : (i + 1)*1000] = Coll_Loss(
-                                                    U                                   = U,
-                                                    Xi                                  = Xi,
-                                                    Coll_Points                         = torch_Inputs[i*1000:(i + 1)*1000, :],
-                                                    Time_Derivative_Order               = Time_Derivative_Order,
-                                                    Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
-                                                    Index_to_Derivatives                = Index_to_x_Derivatives,
-                                                    Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                                                    Device                              = Device)[1].detach();
+                                                    U           = U,
+                                                    Xi          = Xi,
+                                                    Coll_Points = torch_Inputs[i*1000:(i + 1)*1000, :],
+                                                    Derivatives = Derivatives,
+                                                    LHS_Term    = LHS_Term,
+                                                    RHS_Terms   = RHS_Terms,
+                                                    Device      = Device)[1].detach();
     # Clean up.
     if(Num_Coords % 1000 != 0):
         Residual_Coords[Num_Batches*1000:] = Coll_Loss(
-                                                U                                   = U,
-                                                Xi                                  = Xi,
-                                                Coll_Points                         = torch_Inputs[Num_Batches*1000:, :],
-                                                Time_Derivative_Order               = Time_Derivative_Order,
-                                                Highest_Order_Spatial_Derivatives   = Max_Spatial_Derivatives,
-                                                Index_to_Derivatives                = Index_to_x_Derivatives,
-                                                Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                                                Device                              = Device)[1].detach();
+                                                U           = U,
+                                                Xi          = Xi,
+                                                Coll_Points = torch_Inputs[Num_Batches*1000:, :],
+                                                Derivatives = Derivatives,
+                                                LHS_Term    = LHS_Term,
+                                                RHS_Terms   = RHS_Terms,
+                                                Device      = Device)[1].detach();
 
 
     ############################################################################
@@ -296,9 +286,9 @@ if __name__ == "__main__":
             Activation_Function     = Settings.Activation_Function,
             Device                  = torch.device('cpu'),
             Load_File_Name          = Settings.Load_File_Name,
-            Time_Derivative_Order   = Settings.Time_Derivative_Order,
-            Max_Spatial_Derivatives = Settings.Max_Spatial_Derivatives,
-            Maximum_Term_Degree     = Settings.Maximum_Term_Degree,
+            Derivatives             = Settings.Derivatives,
+            LHS_Term                = Settings.LHS_Term,
+            RHS_Terms               = Settings.RHS_Terms,
             t_Coords_Matrix         = t_Coords_Matrix,
             x_Coords_Matrix         = x_Coords_Matrix,
             Inputs                  = Inputs,

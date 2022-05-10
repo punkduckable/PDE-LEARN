@@ -2,26 +2,24 @@
 # Save, Load settings.
 
 # Load settings.
-Load U From Save [bool]:                         True
-Load Xi From Save [bool]:                        True
-Load Optimizer From Save [bool]:                 True
-    Load File Name [str]:                        Burgers_Sine_Tanh_N40_P1000_Adam
+Load U From Save [bool]:                         False
+Load Xi From Save [bool]:                        False
+Load Optimizer From Save [bool]:                 False
+    Load File Name [str]:                        Allen_Cahn_N100_P5000_Rat_Adam
 
 # Save settings
 Save State [bool]:                               True
-    Save File Name [str]:                        Burgers_Sine_Tanh_N40_P1000_Adam
+    Save File Name [str]:                        Allen_Cahn_N100_P5000_Rat_Adam
 
 
 
 ################################################################################
-# PDE settings.
+# Library Settings.
 
-# Order of the time derivative on the PDE's left-hand side
-Time Derivative Order [int]:                     1
+# Where is the library of terms located? Omit the .txt extension. This file
+# should be in the main directory.
+Library File [str]:                              Library
 
-# Library function Settings
-Highest order spatial derivative of U [int]:     2
-Maximum Polynomial Term Degree [int]:            2
 
 
 ################################################################################
@@ -30,7 +28,7 @@ Maximum Polynomial Term Degree [int]:            2
 # U network.
 Number of Hidden Layers [int]:                   5
 Hidden Units per Hidden Layer [int]:             50
-Activation Function [Tanh, Rational, Sin]:       Tanh
+Activation Function [Tanh, Rational, Sin]:       Rat
 
 # Device settings.
 Train on CPU or GPU [GPU, CPU]:                  cpu
@@ -41,17 +39,11 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Lambda [float]:                                  .0002
+Lambda [float]:                                  .000
 
-Number of Training Collocation Points [int]:     5000
+
+Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
-
-
-
-################################################################################
-# Threshold Settings.
-
-Threshold [float]:                               .001
 
 
 
@@ -60,11 +52,11 @@ Threshold [float]:                               .001
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          500
+Number of Epochs [int]:                          1000
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet [str]:                                  Burgers_Sine_N40_P1000
+DataSet [str]:                                    Allen_Cahn_N100_P5000

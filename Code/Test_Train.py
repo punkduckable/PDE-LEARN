@@ -1,28 +1,36 @@
-import numpy as np;
-import torch;
-from typing     import Tuple;
+# Nonsense to add Readers, Classes directories to the Python search path.
+import os
+import sys
 
-from Network    import  Neural_Network;
-from Loss       import  Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
-from Mappings   import  Col_Number_to_Multi_Index_Class, \
-                        Index_to_x_Derivatives, Index_to_xy_Derivatives_Class;
+# Get path to Code, Readers, Classes directories.
+Code_Path       = os.path.dirname(os.path.abspath(__file__));
+Classes_Path    = os.path.join(Code_Path, "Classes");
+
+# Add the Readers, Classes directories to the python path.
+sys.path.append(Classes_Path);
+
+import  numpy as np;
+import  torch;
+from    typing     import Tuple, List;
+
+from Network    import Neural_Network;
+from Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
+from Derivative import Derivative;
+from Term       import Term;
 
 
-
-def Training(
-        U                                   : Neural_Network,
-        Xi                                  : torch.Tensor,
-        Coll_Points                         : torch.Tensor,
-        Inputs                              : torch.Tensor,
-        Targets                             : torch.Tensor,
-        Time_Derivative_Order               : int,
-        Highest_Order_Spatial_Derivatives   : int,
-        Index_to_Derivatives,
-        Col_Number_to_Multi_Index           : Col_Number_to_Multi_Index_Class,
-        p                                   : float,
-        Lambda                              : float,
-        Optimizer                           : torch.optim.Optimizer,
-        Device                              : torch.device = torch.device('cpu')) -> torch.Tensor:
+def Training(   U               : Neural_Network,
+                Xi              : torch.Tensor,
+                Coll_Points     : torch.Tensor,
+                Inputs          : torch.Tensor,
+                Targets         : torch.Tensor,
+                Derivatives     : List[Derivative],
+                LHS_Term        : Term,
+                RHS_Terms       : List[Term],
+                p               : float,
+                Lambda          : float,
+                Optimizer       : torch.optim.Optimizer,
+                Device          : torch.device = torch.device('cpu')) -> torch.Tensor:
     """ This function runs one epoch of training. We enforce the learned PDE
     (library-Xi product) at the Coll_Points. We also make U match the
     Targets at the Inputs.
@@ -49,25 +57,23 @@ def Training(
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
-    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
-    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+    Derivatives: We try to learn a PDE of the form
+            T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
+    where each T_k is a "Term" of the form
+            T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
+    where each D_j is a derivative operator and p(j) >= 1. Derivatives is a list
+    that contains each D_j's in each term in the equation above. This list
+    should be ordered according to the Derivatives' orders (see Derivative
+    class).
 
-    Highest_Order_Spatial_Derivatives: The highest order spatial partial
-    derivatives of U that are present in the library terms.
+    LHS_Term : A Term object representing T_0 in the equation above.
 
-    Index_to_Derivatives: A mapping which sends sub-index values to spatial
-    partial derivatives. This is needed to build the library in Coll_Loss.
-    If U is a function of 1 spatial variable, this should be the function
-    Index_to_x_Derivatives. If U is a function of two spatial variables, this
-    should be an instance of Index_to_xy_Derivatives.
-
-    Col_Number_to_Multi_Index: A mapping which sends column numbers to
-    Multi-Indices. Coll_Loss needs this function. This should be an instance of
-    the Col_Number_to_Multi_Index_Class class.
+    RHS_Terms : A list of Term objects whose ith entry represents T_i in the
+    equation above.
 
     p, Lambda: the settings value for p and Lambda (in the loss function).
 
-    optimizer: the optimizer we use to train U and Xi. It should have
+    Optimizer: the optimizer we use to train U and Xi. It should have
     been initialized with both network's parameters.
 
     Device: The device for U and Xi.
@@ -92,14 +98,13 @@ def Training(
             Optimizer.zero_grad();
 
         # Evaluate the Losses
-        Coll_Loss_Value, Resid = Coll_Loss( U                                   = U,
-                                            Xi                                  = Xi,
-                                            Coll_Points                         = Coll_Points,
-                                            Time_Derivative_Order               = Time_Derivative_Order,
-                                            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-                                            Index_to_Derivatives                = Index_to_Derivatives,
-                                            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-                                            Device                              = Device);
+        Coll_Loss_Value, Resid = Coll_Loss( U           = U,
+                                            Xi          = Xi,
+                                            Coll_Points = Coll_Points,
+                                            Derivatives = Derivatives,
+                                            LHS_Term    = LHS_Term,
+                                            RHS_Terms   = RHS_Terms,
+                                            Device      = Device);
 
         Data_Loss_Value : torch.Tensor  = Data_Loss(
                                             U                   = U,
@@ -131,19 +136,17 @@ def Training(
 
 
 
-def Testing(
-        U                                   : Neural_Network,
-        Xi                                  :  Neural_Network,
-        Coll_Points                         : torch.Tensor,
-        Inputs                              : torch.Tensor,
-        Targets                             : torch.Tensor,
-        Time_Derivative_Order               : int,
-        Highest_Order_Spatial_Derivatives   : int,
-        Index_to_Derivatives,
-        Col_Number_to_Multi_Index           : Col_Number_to_Multi_Index_Class,
-        p                                   : float,
-        Lambda                              : float,
-        Device                              : torch.device = torch.device('cpu')) -> Tuple[float, float]:
+def Testing(    U               : Neural_Network,
+                Xi              : Neural_Network,
+                Coll_Points     : torch.Tensor,
+                Inputs          : torch.Tensor,
+                Targets         : torch.Tensor,
+                Derivatives     : List[Derivative],
+                LHS_Term        : Term,
+                RHS_Terms       : List[Term],
+                p               : float,
+                Lambda          : float,
+                Device          : torch.device = torch.device('cpu')) -> Tuple[float, float]:
     """ This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
@@ -172,21 +175,19 @@ def Testing(
     of floats whose ith element holds the value of the true solution at the ith
     data point.
 
-    Time_Derivative_Order: We try to solve a PDE of the form (d^n U/dt^n) =
-    N(U, D_{x}U, ...). This is the 'n' on the left-hand side of that PDE.
+    Derivatives: We try to learn a PDE of the form
+            T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
+    where each T_k is a "Term" of the form
+            T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
+    where each D_j is a derivative operator and p(j) >= 1. Derivatives is a list
+    that contains each D_j's in each term in the equation above. This list
+    should be ordered according to the Derivatives' orders (see Derivative
+    class).
 
-    Highest_Order_Spatial_Derivatives: The highest order spatial partial
-    derivatives of U that are present in the library terms.
+    LHS_Term : A Term object representing T_0 in the equation above.
 
-    Index_to_Derivatives: A mapping which sends sub-index values to spatial
-    partial derivatives. This is needed to build the library in Coll_Loss.
-    If U is a function of 1 spatial variable, this should be the function
-    Index_to_x_Derivatives. If U is a function of two spatial variables, this
-    should be an instance of Index_to_xy_Derivatives.
-
-    Col_Number_to_Multi_Index: A mapping which sends column numbers to
-    Multi-Indices. Coll_Loss needs this function. This should be an instance of
-    the Col_Number_to_Multi_Index_Class class.
+    RHS_Terms : A list of Term objects whose ith entry represents T_i in the
+    equation above.
 
     p, Lambda: the settings value for p and Lambda (in the loss function).
 
@@ -207,19 +208,17 @@ def Testing(
             Inputs      = Inputs,
             Targets     = Targets).item();
 
-    Coll_Loss_Value : float = Coll_Loss(
-            U                                   = U,
-            Xi                                  = Xi,
-            Coll_Points                         = Coll_Points,
-            Time_Derivative_Order               = Time_Derivative_Order,
-            Highest_Order_Spatial_Derivatives   = Highest_Order_Spatial_Derivatives,
-            Index_to_Derivatives                = Index_to_Derivatives,
-            Col_Number_to_Multi_Index           = Col_Number_to_Multi_Index,
-            Device                              = Device)[0].item();
+    Coll_Loss_Value : float = Coll_Loss(U           = U,
+                                        Xi          = Xi,
+                                        Coll_Points = Coll_Points,
+                                        Derivatives = Derivatives,
+                                        LHS_Term    = LHS_Term,
+                                        RHS_Terms   = RHS_Terms,
+                                        Device      = Device)[0].item();
 
     Lambda_Lp_Loss_Value : float = Lambda*Lp_Loss(
-            Xi    = Xi,
-            p     = p).item();
+                                            Xi    = Xi,
+                                            p     = p).item();
 
     # Return the losses.
     return (Data_Loss_Value, Coll_Loss_Value, Lambda_Lp_Loss_Value);
