@@ -3,9 +3,9 @@ import os
 import sys
 
 # Get path to Code, Readers, Classes directories.
-Code_Path       = os.path.dirname(os.path.abspath(__file__));
-Readers_Path    = os.path.join(Code_Path, "Readers");
-Classes_Path    = os.path.join(Code_Path, "Classes");
+Code_Path       : str = os.path.dirname(os.path.abspath(__file__));
+Readers_Path    : str = os.path.join(Code_Path, "Readers");
+Classes_Path    : str = os.path.join(Code_Path, "Classes");
 
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Readers_Path);
@@ -14,7 +14,7 @@ sys.path.append(Classes_Path);
 import  numpy;
 import  torch;
 import  time;
-from    typing import List;
+from    typing import List, Dict, Callable;
 
 from Settings_Reader    import Settings_Reader, Settings_Container;
 from Data_Loader        import Data_Loader;
@@ -33,9 +33,8 @@ def main():
     for (Setting, Value) in Settings.__dict__.items():
         print("%-25s = " % Setting, end = '');
 
-        # Check if Value is a List.
+        # Check if Value is a List. If so, print its contents one at a time.
         if(isinstance(Value, list)):
-            # If so, print the list items one at a time.
             for i in range(len(Value)):
                 print(Value[i], end = '');
                 if(i != len(Value) - 1):
@@ -59,11 +58,11 @@ def main():
     # Input_Bounds for each coordinate component. Since one coordinate is for
     # time, one minus the number of rows gives the number of spatial dimensions).
 
-    Data_Container = Data_Loader(   DataSet_Name = Settings.DataSet_Name,
-                                    Device       = Settings.Device);
+    Data_Dict : Dict = Data_Loader( DataSet_Name    = Settings.DataSet_Name,
+                                    Device          = Settings.Device);
 
     # Get the number of input dimensions.
-    Settings.Num_Spatial_Dimensions : int = Data_Container.Input_Bounds.shape[0] - 1;
+    Settings.Num_Spatial_Dimensions : int           = Data_Dict["Number Spatial Dimensions"]
 
     # Now, determine how many library terms we have. This determines Xi's size.
     Num_Library_Terms : int = len(Settings.RHS_Terms)
@@ -121,9 +120,9 @@ def main():
     Params.append(Xi);
 
     if  (Settings.Optimizer == "Adam"):
-        Optimizer = torch.optim.Adam(Params, lr = Settings.Learning_Rate);
+        Optimizer = torch.optim.Adam( Params,   lr = Settings.Learning_Rate);
     elif(Settings.Optimizer == "LBFGS"):
-        Optimizer = torch.optim.LBFGS(Params, lr = Settings.Learning_Rate);
+        Optimizer = torch.optim.LBFGS(Params,   lr = Settings.Learning_Rate);
     else:
         print(("Optimizer is %s when it should be \"Adam\" or \"LBFGS\"" % Settings.Optimizer));
         exit();
@@ -141,7 +140,6 @@ def main():
         for param_group in Optimizer.param_groups:
             param_group['lr'] = Settings.Learning_Rate;
 
-
     # Setup is now complete. Report time.
     print("Done! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
 
@@ -150,29 +148,29 @@ def main():
     # Run the Epochs!
 
     # Set up targeted collocation points.
-    Targeted_Coll_Pts = torch.empty((0, Settings.Num_Spatial_Dimensions + 1), dtype = torch.float32);
-
-    # Set up timer.
-    Epoch_Timer : float = time.perf_counter();
+    Targeted_Coll_Pts : torch.Tensor = torch.empty((0, Settings.Num_Spatial_Dimensions + 1), dtype = torch.float32);
 
     # Epochs!!!
+    Epoch_Timer : float = time.perf_counter();
+
     print("Running %d epochs..." % Settings.Num_Epochs);
     for t in range(1, Settings.Num_Epochs + 1):
-        # First, generate new training collocation points.
-        Random_Coll_Points = Generate_Points(
-                                Bounds      = Data_Container.Input_Bounds,
-                                Num_Points  = Settings.Num_Train_Coll_Points,
-                                Device      = Settings.Device);
+        # First, we need to set up the collocation points for this epoch. This
+        # set is a combination of randomly generated points and the targeted
+        # points from the last epoch.
+        Random_Coll_Points : torch.Tensor = Generate_Points(
+                                                Bounds      = Data_Dict["Input Bounds"],
+                                                Num_Points  = Settings.Num_Train_Coll_Points,
+                                                Device      = Settings.Device);
 
-        # Now, append the targeted collocation points from the last epoch.
         Train_Coll_Points : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
 
         # Now run a Training Epoch. Keep track of the residual.
         Residual = Training(    U           = U,
                                 Xi          = Xi,
                                 Coll_Points = Train_Coll_Points,
-                                Inputs      = Data_Container.Train_Inputs,
-                                Targets     = Data_Container.Train_Targets,
+                                Inputs      = Data_Dict["Train Inputs"],
+                                Targets     = Data_Dict["Train Targets"],
                                 Derivatives = Settings.Derivatives,
                                 LHS_Term    = Settings.LHS_Term,
                                 RHS_Terms   = Settings.RHS_Terms,
@@ -204,7 +202,7 @@ def main():
         if(t % 10 == 0 or t == 1):
             # Generate new testing Collocation Coordinates
             Test_Coll_Points = Generate_Points(
-                            Bounds      = Data_Container.Input_Bounds,
+                            Bounds      = Data_Dict["Input Bounds"],
                             Num_Points  = Settings.Num_Test_Coll_Points,
                             Device      = Settings.Device);
 
@@ -213,8 +211,8 @@ def main():
                 U           = U,
                 Xi          = Xi,
                 Coll_Points = Train_Coll_Points,
-                Inputs      = Data_Container.Train_Inputs,
-                Targets     = Data_Container.Train_Targets,
+                Inputs      = Data_Dict["Train Inputs"],
+                Targets     = Data_Dict["Train Targets"],
                 Derivatives = Settings.Derivatives,
                 LHS_Term    = Settings.LHS_Term,
                 RHS_Terms   = Settings.RHS_Terms,
@@ -227,8 +225,8 @@ def main():
                 U           = U,
                 Xi          = Xi,
                 Coll_Points = Train_Coll_Points,
-                Inputs      = Data_Container.Test_Inputs,
-                Targets     = Data_Container.Test_Targets,
+                Inputs      = Data_Dict["Test Inputs"],
+                Targets     = Data_Dict["Test Targets"],
                 Derivatives = Settings.Derivatives,
                 LHS_Term    = Settings.LHS_Term,
                 RHS_Terms   = Settings.RHS_Terms,

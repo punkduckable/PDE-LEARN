@@ -1,12 +1,7 @@
-import numpy;
-import torch;
-import random;
-
-
-
-class Data_Container:
-    pass;
-
+import  numpy;
+import  torch;
+import  random;
+from    typing  import List, Dict, Callable;
 
 
 def Data_Loader(DataSet_Name   : str,
@@ -25,32 +20,32 @@ def Data_Loader(DataSet_Name   : str,
     ----------------------------------------------------------------------------
     Returns:
 
-    A Data Container object. What's in that container depends on which mode
-    we're in. """
+    A dictionary with six items. Below is a list of the keys (in quotes) as
+    well as their corresponding values:
+        "Train Inputs", "Test Inputs": 2D arrays whose ith row holds the
+        coordinates of the ith training or testing example, respectively.
+
+        "Test Target", "Train Target": 1 column arrays whose ith entry holds the
+        value of the system response function at the ith training and testing
+        points, respectively.
+
+        "Input Bounds": A 2 column array whose ith row holds the lower and
+        upper bounds of the problem domain along the ith axis.
+
+        "Number Spatial Dimensions": An integer specifying the number of spatial
+        dimensions (one less than the number of rows in "Input Bounds").  """
 
     # Load the DataSet.
-    DataSet_Path    = "../Data/DataSets/" + DataSet_Name + ".npz";
-    DataSet         = numpy.load(DataSet_Path);
+    DataSet_Path        = "../Data/DataSets/" + DataSet_Name + ".npz";
+    DataSet             = numpy.load(DataSet_Path);
 
-    # Make the Container.
-    Container = Data_Container();
+    # Now build the return dictionary
+    Data_Dict   : Dict  = { "Train Inputs"              : torch.from_numpy(DataSet["Train_Inputs"]).to( device = Device),
+                            "Train Targets"             : torch.from_numpy(DataSet["Train_Targets"]).to(device = Device),
+                            "Test Inputs"               : torch.from_numpy(DataSet["Test_Inputs"]).to(  device = Device),
+                            "Test Targets"              : torch.from_numpy(DataSet["Test_Targets"]).to( device = Device),
+                            "Input Bounds"              : DataSet["Input_Bounds"],
+                            "Number Spatial Dimensions" : DataSet["Input_Bounds"].shape[0] - 1};
 
-    # First, fetch the training/testing inputs and targets.
-    Train_Inputs    : numpy.ndarray = DataSet["Train_Inputs"];
-    Train_Targets   : numpy.ndarray = DataSet["Train_Targets"];
-
-    Test_Inputs     : numpy.ndarray = DataSet["Test_Inputs"];
-    Test_Targets    : numpy.ndarray = DataSet["Test_Targets"];
-
-    # Convert these to tensors and add them to the container.
-    Container.Train_Inputs  = torch.from_numpy(Train_Inputs).to(device = Device);
-    Container.Train_Targets = torch.from_numpy(Train_Targets).to(device = Device);
-
-    Container.Test_Inputs  = torch.from_numpy(Test_Inputs).to(device = Device);
-    Container.Test_Targets = torch.from_numpy(Test_Targets).to(device = Device);
-
-    # Finally, fetch the Input Bounds array.
-    Container.Input_Bounds = DataSet["Input_Bounds"];
-
-    # The container is now full. Return it!
-    return Container;
+    # All done... return!
+    return Data_Dict;
