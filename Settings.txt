@@ -5,12 +5,7 @@
 Load U From Save [bool]:                         False
 Load Xi From Save [bool]:                        False
 Load Optimizer From Save [bool]:                 False
-    Load File Name [str]:                        Allen_Cahn_N100_P5000_Rat_Adam
-
-# Save settings
-Save State [bool]:                               True
-    Save File Name [str]:                        Allen_Cahn_N100_P5000_Rat_Adam
-
+    Load File Name [str]:                        Test
 
 
 ################################################################################
@@ -27,7 +22,7 @@ Library File [str]:                              Library
 
 # U network.
 Number of Hidden Layers [int]:                   5
-Hidden Units per Hidden Layer [int]:             50
+Hidden Units per Hidden Layer [int]:             20
 Activation Function [Tanh, Rational, Sin]:       Rat
 
 # Device settings.
@@ -39,7 +34,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Lambda [float]:                                  .000
+Lambda [float]:                                  .0005
 
 
 Number of Training Collocation Points [int]:     3000
@@ -52,11 +47,11 @@ Number of Testing Collocation Points [int]:      1000
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          1000
+Number of Epochs [int]:                          100
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet [str]:                                    Allen_Cahn_N100_P5000
+DataSet [str]:                                    Burgers_Sine_N100_P2500
