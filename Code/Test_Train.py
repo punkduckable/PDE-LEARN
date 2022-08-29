@@ -11,7 +11,7 @@ sys.path.append(Classes_Path);
 
 import  numpy as np;
 import  torch;
-from    typing     import Tuple, List;
+from    typing     import List, Tuple, Dict, Callable;
 
 from Network    import Neural_Network;
 from Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
@@ -30,10 +30,10 @@ def Training(   U               : Neural_Network,
                 p               : float,
                 Lambda          : float,
                 Optimizer       : torch.optim.Optimizer,
-                Device          : torch.device = torch.device('cpu')) -> torch.Tensor:
+                Device          : torch.device = torch.device('cpu')) -> Dict:
     """ This function runs one epoch of training. We enforce the learned PDE
-    (library-Xi product) at the Coll_Points. We also make U match the
-    Targets at the Inputs.
+    (library-Xi product) at the Coll_Points. We also make U match the Targets at
+    the Inputs.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -81,58 +81,76 @@ def Training(   U               : Neural_Network,
     ----------------------------------------------------------------------------
     Returns:
 
-    a 1D tensor whose ith entry holds the value of the collocation loss at the
-    ith collocation point. We use this for adaptive collocation points. You can
-    safely discard this argument if you want to. """
+    A dictionary with the following keys:
+        "Coll Loss", "Data Loss", "Lp Loss": floats housing the value of the
+        corresponding loss.
+
+        "Total Loss": a float housing the total loss.
+
+        "Residual": A 1D tensor whose ith entry holds the value of the PDE
+        residual at the ith collocation point. """
 
     # Put U in training mode.
     U.train();
 
-    # Initialize Residual variable.
-    Residual = torch.empty(Coll_Points.size()[0], dtype = torch.float32);
+    # Initialize variables to track the residual, losses. We need to do this
+    # because we find these variables in the Closure function (which has its own
+    # scope. Thus, any variables created in Closure are inaccessible from
+    # outside Closure).
+    Residual_Buffer     = torch.empty(Coll_Points.shape[0], dtype = torch.float32);
+    Coll_Loss_Buffer    = torch.empty(1, dtype = torch.float32);
+    Data_Loss_Buffer    = torch.empty(1, dtype = torch.float32);
+    Lp_Loss_Buffer      = torch.empty(1, dtype = torch.float32);
+    Total_Loss_Buffer   = torch.empty(1, dtype = torch.float32);
 
     # Define closure function (needed for LBFGS)
-    def Closure():
+    def Closure() -> torch.Tensor:
         # Zero out the gradients (if they are enabled).
         if (torch.is_grad_enabled()):
             Optimizer.zero_grad();
 
         # Evaluate the Losses
-        Coll_Loss_Value, Resid = Coll_Loss( U           = U,
-                                            Xi          = Xi,
-                                            Coll_Points = Coll_Points,
-                                            Derivatives = Derivatives,
-                                            LHS_Term    = LHS_Term,
-                                            RHS_Terms   = RHS_Terms,
-                                            Device      = Device);
+        Coll_Loss_Value, Residual = Coll_Loss(
+                                        U           = U,
+                                        Xi          = Xi,
+                                        Coll_Points = Coll_Points,
+                                        Derivatives = Derivatives,
+                                        LHS_Term    = LHS_Term,
+                                        RHS_Terms   = RHS_Terms,
+                                        Device      = Device);
 
-        Data_Loss_Value : torch.Tensor  = Data_Loss(
-                                            U                   = U,
-                                            Inputs              = Inputs,
-                                            Targets             = Targets);
+        Data_Loss_Value  = Data_Loss(   U                   = U,
+                                        Inputs              = Inputs,
+                                        Targets             = Targets);
 
-        Lp_Loss_Value   : torch.tensor  = Lp_Loss(
-                                            Xi      = Xi,
-                                            p       = p);
+        Lp_Loss_Value    = Lp_Loss(     Xi      = Xi,
+                                        p       = p);
 
-        # Evaluate the loss.
-        Loss    : torch.Tensor  = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
+        Total_Loss       = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
 
-        # Assign the residual.
-        Residual[:] = Resid;
+        # Store their values in the buffers.
+        Residual_Buffer[:]   = Residual;
+        Coll_Loss_Buffer[:]  = Coll_Loss_Value;
+        Data_Loss_Buffer[:]  = Data_Loss_Value;
+        Lp_Loss_Buffer[:]    = Lp_Loss_Value;
+        Total_Loss_Buffer[:] = Total_Loss;
 
-        # Back-propigate to compute gradients of Loss with respect to network
-        # parameters (only do if this if the loss requires grad)
-        if (Loss.requires_grad == True):
-            Loss.backward();
+        # Back-propigate to compute gradients of Total_Loss with respect to
+        # network parameters (only do if this if the loss requires grad)
+        if (Total_Loss.requires_grad == True):
+            Total_Loss.backward();
 
-        return Loss;
+        return Total_Loss;
 
     # update network parameters.
     Optimizer.step(Closure);
 
     # Return the residual tensor.
-    return Residual;
+    return {"Residual"      : Residual_Buffer,
+            "Coll Loss"     : Coll_Loss_Buffer.item(),
+            "Data Loss"     : Data_Loss_Buffer.item(),
+            "Lp Loss"       : Lp_Loss_Buffer.item(),
+            "Total Loss"    : Total_Loss_Buffer.item()};
 
 
 
@@ -146,7 +164,7 @@ def Testing(    U               : Neural_Network,
                 RHS_Terms       : List[Term],
                 p               : float,
                 Lambda          : float,
-                Device          : torch.device = torch.device('cpu')) -> Tuple[float, float]:
+                Device          : torch.device = torch.device('cpu')) -> Dict[str, float]:
     """ This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
@@ -196,8 +214,11 @@ def Testing(    U               : Neural_Network,
     ----------------------------------------------------------------------------
     Returns:
 
-    a tuple of floats. The first element holds the Data_Loss. The second
-    holds the Coll_Loss. The third holds Lambda times the Lp_Loss. """
+    A dictionary with the following keys:
+        "Coll Loss", "Data Loss", "Lp Loss": floats housing the value of the
+        corresponding loss.
+
+        "Total Loss": a float housing the total loss. """
 
     # Put U in evaluation mode
     U.eval();
@@ -206,7 +227,7 @@ def Testing(    U               : Neural_Network,
     Data_Loss_Value : float  = Data_Loss(
             U           = U,
             Inputs      = Inputs,
-            Targets     = Targets).item();
+            Targets     = Targets);
 
     Coll_Loss_Value : float = Coll_Loss(U           = U,
                                         Xi          = Xi,
@@ -214,11 +235,15 @@ def Testing(    U               : Neural_Network,
                                         Derivatives = Derivatives,
                                         LHS_Term    = LHS_Term,
                                         RHS_Terms   = RHS_Terms,
-                                        Device      = Device)[0].item();
+                                        Device      = Device)[0];
 
-    Lambda_Lp_Loss_Value : float = Lambda*Lp_Loss(
-                                            Xi    = Xi,
-                                            p     = p).item();
+    Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
+                                        p     = p);
+
+    Total_Loss : float = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
 
     # Return the losses.
-    return (Data_Loss_Value, Coll_Loss_Value, Lambda_Lp_Loss_Value);
+    return {"Data Loss"     : Data_Loss_Value.item(),
+            "Coll Loss"     : Coll_Loss_Value.item(),
+            "Lp Loss"       : Lp_Loss_Value.item(),
+            "Total Loss"    : Total_Loss.item()};

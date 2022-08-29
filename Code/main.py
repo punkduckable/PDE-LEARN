@@ -147,28 +147,41 @@ def main():
     ############################################################################
     # Run the Epochs!
 
-    # Set up targeted collocation points.
+    # Set up an array to hold the collocation points.
     Targeted_Coll_Pts : torch.Tensor = torch.empty((0, Settings.Num_Spatial_Dimensions + 1), dtype = torch.float32);
 
-    # Epochs!!!
-    Epoch_Timer : float = time.perf_counter();
+    # Set up buffers to hold losses, also set up a timer.
+    Epoch_Timer     : float                     = time.perf_counter();
+    Train_Losses    : Dict[str, numpy.ndarray]  = {"Data Losses"    : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Coll Losses"    : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Lp Losses"      : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Total Losses"   : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32)};
 
+    Test_Losses    : Dict[str, numpy.ndarray]   = {"Data Losses"    : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Coll Losses"    : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Lp Losses"      : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32),
+                                                   "Total Losses"   : numpy.ndarray(shape = Settings.Num_Epochs, dtype = numpy.float32)};
+
+    # Epochs!!!
     print("Running %d epochs..." % Settings.Num_Epochs);
     for t in range(1, Settings.Num_Epochs + 1):
+        ########################################################################
+        # Train
+
         # First, we need to set up the collocation points for this epoch. This
         # set is a combination of randomly generated points and the targeted
         # points from the last epoch.
-        Random_Coll_Points : torch.Tensor = Generate_Points(
+        Random_Coll_Points  : torch.Tensor = Generate_Points(
                                                 Bounds      = Data_Dict["Input Bounds"],
                                                 Num_Points  = Settings.Num_Train_Coll_Points,
                                                 Device      = Settings.Device);
 
-        Train_Coll_Points : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
+        Coll_Points         : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
 
-        # Now run a Training Epoch. Keep track of the residual.
-        Residual = Training(    U           = U,
+        # Now run a Training Epoch.
+        Train_Dict = Training(  U           = U,
                                 Xi          = Xi,
-                                Coll_Points = Train_Coll_Points,
+                                Coll_Points = Coll_Points,
                                 Inputs      = Data_Dict["Train Inputs"],
                                 Targets     = Data_Dict["Train Targets"],
                                 Derivatives = Settings.Derivatives,
@@ -179,9 +192,48 @@ def main():
                                 Optimizer   = Optimizer,
                                 Device      = Settings.Device);
 
+        # Update the loss history buffers.
+        Train_Losses["Data Losses"][t - 1]  = Train_Dict["Data Loss"];
+        Train_Losses["Coll Losses"][t - 1]  = Train_Dict["Coll Loss"];
+        Train_Losses["Lp Losses"][t - 1]    = Train_Dict["Lp Loss"];
+        Train_Losses["Total Losses"][t - 1] = Train_Dict["Total Loss"];
+
+
+        ########################################################################
+        # Test
+
+        # First, generate random collocation points then evaluate the
+        # network on them.
+        Test_Coll_Points = Generate_Points(
+                            Bounds      = Data_Dict["Input Bounds"],
+                            Num_Points  = Settings.Num_Test_Coll_Points,
+                            Device      = Settings.Device);
+
+        # Evaluate losses on the testing points.
+        Test_Dict = Testing(    U           = U,
+                                Xi          = Xi,
+                                Coll_Points = Test_Coll_Points,
+                                Inputs      = Data_Dict["Test Inputs"],
+                                Targets     = Data_Dict["Test Targets"],
+                                Derivatives = Settings.Derivatives,
+                                LHS_Term    = Settings.LHS_Term,
+                                RHS_Terms   = Settings.RHS_Terms,
+                                p           = Settings.p,
+                                Lambda      = Settings.Lambda,
+                                Device      = Settings.Device);
+
+        Test_Losses["Data Losses"][t - 1]   = Test_Dict["Data Loss"];
+        Test_Losses["Coll Losses"][t - 1]   = Test_Dict["Coll Loss"];
+        Test_Losses["Lp Losses"][t - 1]     = Test_Dict["Lp Loss"];
+        Test_Losses["Total Losses"][t - 1]  = Test_Dict["Total Loss"];
+
+
+        ########################################################################
+        # Update targeted residual points.
+
         # Find the Absolute value of the residuals. Isolate those corresponding
         # to the "random" collocation points.
-        Abs_Residual        : torch.Tensor = torch.abs(Residual);
+        Abs_Residual        : torch.Tensor = torch.abs(Train_Dict["Residual"]);
         Random_Residuals    : torch.Tensor = Abs_Residual[:Settings.Num_Train_Coll_Points];
 
         # Evaluate the mean, standard deviation of the absolute residual at the
@@ -189,59 +241,29 @@ def main():
         Residual_Mean   : torch.Tensor = torch.mean(Random_Residuals);
         Residual_SD     : torch.Tensor = torch.std(Random_Residuals);
 
-        # Determine which collocation points have residuals that are more than
-        # 2 STD above the mean.
+        # Determine which collocation points have residuals that are very far
+        # from the mean. At these points, the PDE has a lot of trouble learning
+        # something meaningful. The network/PDE needs to adjust its behavior
+        # here, so we should hold onto that point.
         Cutoff                  : float         = Residual_Mean + 3*Residual_SD
         Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
 
         # Keep the corresponding collocation points.
-        Targeted_Coll_Pts       : torch.Tensor  = Train_Coll_Points[Big_Residual_Indices, :].detach();
+        Targeted_Coll_Pts       : torch.Tensor  = Coll_Points[Big_Residual_Indices, :].detach();
 
-        # Test the code (and print the loss) every 10 Epochs. For all other
-        # epochs, print the Epoch to indicate the program is making progress.
+
+        ########################################################################
+        # Report!
+
         if(t % 10 == 0 or t == 1):
-            # Generate new testing Collocation Coordinates
-            Test_Coll_Points = Generate_Points(
-                            Bounds      = Data_Dict["Input Bounds"],
-                            Num_Points  = Settings.Num_Test_Coll_Points,
-                            Device      = Settings.Device);
-
-            # Evaluate losses on training points.
-            (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss) = Testing(
-                U           = U,
-                Xi          = Xi,
-                Coll_Points = Train_Coll_Points,
-                Inputs      = Data_Dict["Train Inputs"],
-                Targets     = Data_Dict["Train Targets"],
-                Derivatives = Settings.Derivatives,
-                LHS_Term    = Settings.LHS_Term,
-                RHS_Terms   = Settings.RHS_Terms,
-                p           = Settings.p,
-                Lambda      = Settings.Lambda,
-                Device      = Settings.Device);
-
-            # Evaluate losses on the testing points.
-            (Test_Data_Loss, Test_Coll_Loss, Test_Lp_Loss) = Testing(
-                U           = U,
-                Xi          = Xi,
-                Coll_Points = Train_Coll_Points,
-                Inputs      = Data_Dict["Test Inputs"],
-                Targets     = Data_Dict["Test Targets"],
-                Derivatives = Settings.Derivatives,
-                LHS_Term    = Settings.LHS_Term,
-                RHS_Terms   = Settings.RHS_Terms,
-                p           = Settings.p,
-                Lambda      = Settings.Lambda,
-                Device      = Settings.Device);
-
-            # Print losses!
             print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
-                % (t, Test_Data_Loss, Test_Coll_Loss, Test_Lp_Loss, Test_Data_Loss + Test_Coll_Loss + Test_Lp_Loss));
+                % (t, Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Lp Loss"], Test_Dict["Total Loss"]));
             print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
-                % (Train_Data_Loss, Train_Coll_Loss, Train_Lp_Loss, Train_Data_Loss + Train_Coll_Loss + Train_Lp_Loss));
+                % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Lp Loss"], Train_Dict["Total Loss"]));
         else:
             print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
+    # Report runtime!
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
     print("Done! It took %7.2fs," % Epoch_Runtime);
     print("an average of %7.2fs per epoch." % (Epoch_Runtime / Settings.Num_Epochs));
