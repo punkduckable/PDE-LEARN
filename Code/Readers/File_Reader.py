@@ -16,7 +16,8 @@ def Index_After_Phrase(
         Line_In   : str,
         Phrase_In : str,
         Case_Sensitive : bool = False) -> int:
-    """ This function searches for the substring Phrase_In within Line_In.
+    """ 
+    This function searches for the substring Phrase_In within Line_In.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -34,7 +35,8 @@ def Index_After_Phrase(
 
     If Phrase_In is a substring of Line_In, then this returns the index of the
     first character after the first instance of Phrase_In within Line_In. If
-    Phrase_In is NOT a substring of Line_In, then this function returns -1. """
+    Phrase_In is NOT a substring of Line_In, then this function returns -1. 
+    """
 
     # First, get the number of characters in Line/Phrase.
     Num_Chars_Line   : int = len(Line_In);
@@ -89,7 +91,8 @@ def Read_Line_After(
         Phrase         : str,
         Comment_Char   : str = '#',
         Case_Sensitive : bool = False) -> str:
-    """ This function tries to find a line of File that contains Phrase as a
+    """ 
+    This function tries to find a line of File that contains Phrase as a
     substring. Note that we start searching at the current position of the file
     pointer. We do not search from the start of File.
 
@@ -118,7 +121,8 @@ def Read_Line_After(
     everything in that line after the first occurrence of Phrase. If it can't
     find Phrase in one of File's lines, it raises an exception. If the Phrase is
     "cat is", and one of File's lines is "the cat is fat", then this will return
-    " fat". """
+    " fat". 
+    """
 
     # Search the lines of File for one that contains Phrase as a substring.
     while(True):
@@ -156,7 +160,8 @@ def Read_Line_After(
 
 
 def Read_Bool_Setting(File, Setting_Name : str) -> bool:
-    """ Reads a boolean setting from File.
+    """ 
+    Reads a boolean setting from File.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -169,7 +174,8 @@ def Read_Bool_Setting(File, Setting_Name : str) -> bool:
     ----------------------------------------------------------------------------
     Return:
 
-    The value of the boolean setting. """
+    The value of the boolean setting. 
+    """
 
     # Read the setting. This will yield a string.
     Buffer = Read_Line_After(File, Setting_Name).strip();
@@ -189,8 +195,9 @@ def Read_Bool_Setting(File, Setting_Name : str) -> bool:
 
 
 def Read_List_Setting(File, Setting_Name : str) -> List[str]:
-    """ Reads a setting whose value is a list. We return that list with each
-    list item stored as a string.
+    """ 
+    Reads a setting whose value is a list. We return that list with each list 
+    item stored as a string.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -204,7 +211,8 @@ def Read_List_Setting(File, Setting_Name : str) -> List[str]:
     Return:
 
     A list whose ith element holds the ith element of the setting, stored as
-    a string. """
+    a string. 
+    """
 
     Buffer : str = Read_Line_After(File, Setting_Name).strip();
 
@@ -231,8 +239,9 @@ def Read_List_Setting(File, Setting_Name : str) -> List[str]:
 
 
 def Read_Dict_Setting(File, Setting_Name : str) -> Dict[str, str]:
-    """ Reads a setting whose value is a dictionary. We return a dictionary 
-    with the same keys and values. 
+    """ 
+    Reads a setting whose value is a dictionary. We return a dictionary with 
+    the same keys and values. 
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -246,7 +255,8 @@ def Read_Dict_Setting(File, Setting_Name : str) -> Dict[str, str]:
     Return:
 
     A dictionary with the same keys and values as the setting dictionary. All 
-    keys and values are strings. """
+    keys and values are strings. 
+    """
 
     Buffer : str = Read_Line_After(File, Setting_Name).strip();
 
@@ -286,9 +296,9 @@ def Read_Dict_Setting(File, Setting_Name : str) -> Dict[str, str]:
 
 
 
-
 def Read_Setting(File, Setting_Name : str) -> str:
-    """ Reads a non-boolean setting from File.
+    """ 
+    Reads a non-boolean setting from File.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -302,7 +312,8 @@ def Read_Setting(File, Setting_Name : str) -> str:
     Return:
 
     The value of the non-boolean setting as a string (you may need to type cast
-    the returned value) """
+    the returned value) 
+    """
 
     # Read the setting. This will yield a string.
     Buffer = Read_Line_After(File, Setting_Name).strip();

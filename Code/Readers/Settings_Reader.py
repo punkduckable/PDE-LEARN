@@ -7,7 +7,8 @@ from Library_Reader import Read_Library;
 
 
 def Settings_Reader() -> Dict:
-    """ This function reads the settings in Settings.txt.
+    """ 
+    This function reads the settings in Settings.txt.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -18,7 +19,8 @@ def Settings_Reader() -> Dict:
     Returns:
 
     A dictionary housing the settings we read from Settings.txt. The main
-    function uses these to set up the program. """
+    function uses these to set up the program. 
+    """
 
     File = open("../Settings.txt", "r");
     Settings = {};
@@ -28,14 +30,14 @@ def Settings_Reader() -> Dict:
     # Save, Load Settings
 
     # Load Sol, Xi, or Optimizer from File?
-    Settings["Load U"]          = Read_Bool_Setting(File, "Load U From Save [bool]:");
-    Settings["Load Xi"]         = Read_Bool_Setting(File, "Load Xi From Save [bool]:");
-    Settings["Load Optimizer"]  = Read_Bool_Setting(File, "Load Optimizer From Save [bool]:");
+    Settings["Load U"]              = Read_Bool_Setting(File, "Load U from Save [bool]:");
+    Settings["Load Xi, Library"]    = Read_Bool_Setting(File, "Load Xi, Library from Save [bool]:");
+    Settings["Load Optimizer"]      = Read_Bool_Setting(File, "Load Optimizer from Save [bool]:");
 
     # If so, get the load file name.
-    if( Settings["Load U"]          == True or
-        Settings["Load Xi"]         == True or
-        Settings["Load Optimizer"]  == True):
+    if( Settings["Load U"]              == True or
+        Settings["Load Xi, Library"]    == True or
+        Settings["Load Optimizer"]      == True):
 
         Settings["Load File Name"] = Read_Line_After(File, "Load File Name [str]:").strip();
 
@@ -43,39 +45,38 @@ def Settings_Reader() -> Dict:
     ############################################################################
     # Library Settings.
 
-    # Where is the file that lists the library functions / derivatives?
-    Library_File_Name : str             = Read_Setting(File, "Library File [str]:");
-    Library_Path      : str             = "../" + Library_File_Name + ".txt";
-    Derivatives, LHS_Term, RHS_Terms    = Read_Library(Library_Path);
-
-    Settings["Derivatives"] = Derivatives;
-    Settings["LHS Term"]    = LHS_Term;
-    Settings["RHS Terms"]   = RHS_Terms;
-
+    # If we are not loading the library from save, then where is the file that 
+    # lists the library functions / derivatives?
+    if(Settings["Load Xi, Library"] == False):
+        Library_File_Name : str     = Read_Setting(File, "Library File [str]:");
+        Settings["Library Path"]    = "../" + Library_File_Name + ".txt";
 
 
     ############################################################################
     # Network settings.
 
-    # Width of the hidden layers
-    Buffer : List[str] = Read_List_Setting(File, "Hidden Layer Widths [List of int]:");
-    for i in range(len(Buffer)):
-        Buffer[i] = int(Buffer[i]);
-    
-    Settings["Hidden Layer Widths"] = Buffer;
+    # Read in network architecture if we are not loading U from save.
+    if(Settings["Load U"] == False):
+        # Width of the hidden layers
+        Buffer : List[str] = Read_List_Setting(File, "Hidden Layer Widths [List of int]:");
+        for i in range(len(Buffer)):
+            Buffer[i] = int(Buffer[i]);
+        
+        Settings["Hidden Layer Widths"] = Buffer;
 
-    # Which activation function should we use?
-    Buffer = Read_Setting(File, "Activation Function [Tanh, Rational, Sin]:");
-    if  (Buffer[0] == 'R' or Buffer[0] == 'r'):
-        Settings["Activation Function"] = "Rational";
-    elif(Buffer[0] == 'T' or Buffer[0] == 't'):
-        Settings["Activation Function"] = "Tanh";
-    elif(Buffer[0] == 'S' or Buffer[0] == 's'):
-        Settings["Activation Function"] = "Sin";
-    else:
-        raise Read_Error("\"Activation Function [Tanh, Rational, Sin]:\" should be" + \
-                         "\"Tanh\", \"Rational\", or \"Sin\" Got " + Buffer);
+        # Which activation function should we use?
+        Buffer = Read_Setting(File, "Hidden Activation Function [str]:");
+        if  (Buffer[0] == 'R' or Buffer[0] == 'r'):
+            Settings["Activation Function"] = "Rational";
+        elif(Buffer[0] == 'T' or Buffer[0] == 't'):
+            Settings["Activation Function"] = "Tanh";
+        elif(Buffer[0] == 'S' or Buffer[0] == 's'):
+            Settings["Hidden Activation Function"] = "Sin";
+        else:
+            raise Read_Error("\"Activation Function [Tanh, Rational, Sin]:\" should be" + \
+                            "\"Tanh\", \"Rational\", or \"Sin\" Got " + Buffer);
 
+    # Read the device.
     Buffer = Read_Setting(File, "Train on CPU or GPU [GPU, CPU]:");
     if(Buffer[0] == 'G' or Buffer[0] == 'g'):
         if(torch.cuda.is_available() == True):

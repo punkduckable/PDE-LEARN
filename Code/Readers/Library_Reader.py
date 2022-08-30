@@ -19,7 +19,8 @@ from    Term            import Term;
 
 
 def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
-    """ This function reads a Sub-Term; That is, an expression of the following
+    """ 
+    This function reads a Sub-Term; That is, an expression of the following 
     form:
             (D_x^i D_y^j D_t^k u)^p
     In general, there may or may not be a power, p. If not, there may or may not
@@ -32,7 +33,8 @@ def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
     Buffer: This should be a string that contains a representation of the
     Library term we want to read. In general, this will be of the form
         (D_x^i D_y^j D_t^k u)^p.
-    here, p must be a natural number. If there is no exponent, we infer p = 1. """
+    here, p must be a natural number. If there is no exponent, we infer p = 1. 
+    """
 
     # First, check if there are parenthesis. If so, split by the closing
     # one, and remove the first.
@@ -92,7 +94,7 @@ def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
             raise Read_Error("Derivative term has the wrong format. Buffer = "  + Buffer);
 
         # Each derivative term should either be of the form D_s or D_s^p. We
-        # handle these cases separatly.
+        # handle these cases separately.
         p : int = 1;
         if  ('^' in Component):
             p : int = int(Component[-1]);
@@ -114,8 +116,7 @@ def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
 
 
 def Parse_Term(Buffer : str) -> Term:
-    """ TO DO!!!!
-
+    """
     This function parses a term from a line of the Library file. The "Buffer"
     argument should be a stripped line of Library.txt that contains a term. In
     general, Read_Term is the only function that should call this one. Here, we
@@ -152,7 +153,8 @@ def Parse_Term(Buffer : str) -> Term:
 
 
 def Read_Term(File) -> Term:
-    """ This function reads a term (sequence of sub-terms, separated by *'s) from
+    """ 
+    This function reads a term (sequence of sub-terms, separated by *'s) from 
     the Library file. To do that, we search through the file for the first
     line that is neither blank nor entirely a comment. We then parse the term
     within.
@@ -161,7 +163,8 @@ def Read_Term(File) -> Term:
     Arguments:
 
     File: The file we want to read a term from. This file should contain the
-    terms (as strings) using the format specified in Library.txt. """
+    terms (as strings) using the format specified in Library.txt. 
+    """
 
     # Look for the next line that contains a library function.
     Line : str = "";
@@ -188,7 +191,8 @@ def Read_Term(File) -> Term:
 
 
 def Read_Library(File_Path : str) -> Tuple[List[Derivative], Term, List[Term]]:
-    """ This function reads the Library terms in Library.txt.
+    """ 
+    This function reads the Library terms in Library.txt.
 
     ----------------------------------------------------------------------------
     Arguments:
