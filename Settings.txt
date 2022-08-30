@@ -2,10 +2,10 @@
 # Save, Load settings.
 
 # Load settings.
-Load U From Save [bool]:                         False
-Load Xi From Save [bool]:                        False
-Load Optimizer From Save [bool]:                 False
-    Load File Name [str]:                        Test
+Load U from Save [bool]:                         True
+Load Xi, Library from Save [bool]:               True
+Load Optimizer from Save [bool]:                 True
+    Load File Name [str]:                        Burgers_Sine_N100_P5000_Rational_Adam
 
 
 
@@ -13,7 +13,8 @@ Load Optimizer From Save [bool]:                 False
 # Library Settings.
 
 # Where is the library of terms located? Omit the .txt extension. This file
-# should be in the main directory.
+# should be in the main directory. You can ignore this if loading the Library 
+# from Save.
 Library File [str]:                              Library
 
 
@@ -21,9 +22,9 @@ Library File [str]:                              Library
 ################################################################################
 # Network settings.
 
-# U network.
+# U network Settings. Ignore these if you're loading U from a save.
 Hidden Layer Widths [List of int]:               20, 20, 20, 20, 20
-Activation Function [Tanh, Rational, Sin]:       Rat
+Hidden Activation Function [str]:                Rat
 
 # Device settings.
 Train on CPU or GPU [GPU, CPU]:                  cpu
@@ -34,7 +35,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0005}
+Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0002}
 
 Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
@@ -46,11 +47,11 @@ Number of Testing Collocation Points [int]:      1000
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          100
+Number of Epochs [int]:                          500
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet [str]:                                    Burgers_Sine_N100_P2500
+DataSet [str]:                                    Burgers_Sine_N100_P5000

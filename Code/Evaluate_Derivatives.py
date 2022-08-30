@@ -21,7 +21,8 @@ def Derivative_From_Derivative(
         Db          : Derivative,
         Db_U        : torch.Tensor,
         Coords      : torch.Tensor) -> torch.Tensor:
-    """ This function applies the derivative operator Da to U. It does so,
+    """ 
+    This function applies the derivative operator Da to U. It does so,
     however, by calculating Da U from Db U, where Db is a partial derivative
     operator that is "child derivative" of Da. This means that Da's Encoding
     vector is >= (element-wise ) and Db's. If this is the case, then we can
@@ -60,7 +61,8 @@ def Derivative_From_Derivative(
 
     This returns a 1D Tensor. If Coords has B rows, then the returned tensor has
     B elements. The ith component of the returned Tensor holds Da U evaluated
-    at the ith coordinate (ith row of Coords). """
+    at the ith coordinate (ith row of Coords). 
+    """
 
     # First, make sure that Db is a child of Da.
     assert(Db.Is_Child_Of(Da));

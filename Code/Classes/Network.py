@@ -30,7 +30,8 @@ class Rational(torch.nn.Module):
 
 
     def forward(self, X : torch.tensor):
-        """ This function applies a rational function to each element of X.
+        """ 
+        This function applies a rational function to each element of X.
 
         ------------------------------------------------------------------------
         Arguments:
@@ -42,7 +43,8 @@ class Rational(torch.nn.Module):
 
         Let N(x) = sum_{i = 0}^{3} a_i x^i and D(x) = sum_{i = 0}^{2} b_i x^i.
         Let R = N/D (ignoring points where D(x) = 0). This function applies R
-        to each element of X and returns the resulting tensor. """
+        to each element of X and returns the resulting tensor. 
+        """
 
         # Create aliases for self.a and self.b. This makes the code cleaner.
         a = self.a;
@@ -283,7 +285,8 @@ class Network(torch.nn.Module):
         
 
     def forward(self, X : torch.Tensor) -> torch.Tensor:
-        """ Forward method for the NN class. Note that the user should NOT call
+        """ 
+        Forward method for the NN class. Note that the user should NOT call
         this function directly. Rather, they should call it through the __call__
         method (using the NN object like a function), which is part of the
         module class and calls forward.
@@ -299,7 +302,8 @@ class Network(torch.nn.Module):
 
         If X is a B by Input_Dim tensor, then the output of this function is a
         B by Output_Dim tensor, whose ith row holds the value of the network
-        applied to the ith row of X. """
+        applied to the ith row of X.
+        """
 
         # Pass X through the hidden layers. Each has an activation function.
         for i in range(0, self.Num_Hidden_Layers):

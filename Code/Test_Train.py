@@ -31,7 +31,8 @@ def Training(   U               : Network,
                 Weights         : Dict[str, float],
                 Optimizer       : torch.optim.Optimizer,
                 Device          : torch.device = torch.device('cpu')) -> Dict:
-    """ This function runs one epoch of training. We enforce the learned PDE
+    """ 
+    This function runs one epoch of training. We enforce the learned PDE 
     (library-Xi product) at the Coll_Points. We also make U match the Targets at
     the Inputs.
 
@@ -91,7 +92,8 @@ def Training(   U               : Network,
         "Total Loss": a float housing the total loss.
 
         "Residual": A 1D tensor whose ith entry holds the value of the PDE
-        residual at the ith collocation point. """
+        residual at the ith collocation point.
+    """
 
     # Put U in training mode.
     U.train();
@@ -168,7 +170,8 @@ def Testing(    U               : Network,
                 p               : float,
                 Weights         : Dict[str, float],
                 Device          : torch.device = torch.device('cpu')) -> Dict[str, float]:
-    """ This function evaluates the losses.
+    """ 
+    This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
     need to evaluate derivatives of U with respect to its inputs to evaluate
@@ -221,7 +224,8 @@ def Testing(    U               : Network,
         "Coll Loss", "Data Loss", "Lp Loss": floats housing the value of the
         corresponding loss.
 
-        "Total Loss": a float housing the total loss. """
+        "Total Loss": a float housing the total loss. 
+    """
 
     # Put U in evaluation mode
     U.eval();

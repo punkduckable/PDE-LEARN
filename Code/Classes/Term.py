@@ -7,8 +7,9 @@ from    Derivative  import Derivative;
 
 
 class Term():
-    """ We assume the system response function, u, satisfies a PDE of the
-    following form:
+    """ 
+    We assume the system response function, u, satisfies a PDE of the following
+    form:
             T_1(U) = \sum_{k = 1}^{N} c_k T_k(U)
     where each T_k is an expression of the form
             T_k(u) = (D^{(1)} u)^{p(1)} (D^{(2)} u)^(p(2)} ... (D^{(n)} u)^{p(n)}
@@ -27,14 +28,16 @@ class Term():
     p(k) in the list above.
 
     Num_Sub_Terms : The number of sub terms in the Term. Equivalently, the
-    length of Derivatives and Powers.  """
+    length of Derivatives and Powers.
+    """
 
 
 
     def __init__(   self,
                     Derivatives :   List[Derivative],
                     Powers      :   List[int]):
-        """ This is the class initializer. If Derivatives and Powers have n
+        """ 
+        This is the class initializer. If Derivatives and Powers have n
         elements, the ith entry of Derivatives corresponds to the partial
         derivative operator D^{(i)}, and the ith entry of Powers is p(i), then
         the initialized object represents the term
@@ -46,7 +49,8 @@ class Term():
         Derivatives : A list of derivative objects.
 
         Powers : A list of natural numbers. This list should be the same length
-        as Derivatives. """
+        as Derivatives. 
+        """
 
         # Make sure Derivatives, Powers have the same length
         assert(len(Derivatives) == len(Powers));

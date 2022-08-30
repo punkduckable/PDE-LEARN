@@ -25,12 +25,13 @@ def Data_Loss(
         U           : Network,
         Inputs      : torch.Tensor,
         Targets     : torch.Tensor) -> torch.Tensor:
-    """ This function evaluates the data loss, which is the mean square
-    error between U at the Inputs, and the Targets. To do this, we
-    first evaluate U at the data points. At each point (t, x), we then 
-    evaluate |U(t, x) - U'_{t, x}|2, where U'_{t,x} is the data point
-    corresponding to (t, x). We sum up these values and then divide by the
-    number of data points.
+    """ 
+    This function evaluates the data loss, which is the mean square error 
+    between U at the Inputs, and the Targets. To do this, we first evaluate U 
+    at the data points. At each point (t, x), we then  evaluate 
+    |U(t, x) - U'_{t, x}|2, where U'_{t,x} is the data point corresponding to 
+    (t, x). We sum up these values and then divide by the number of data 
+    points.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -49,7 +50,8 @@ def Data_Loss(
     ----------------------------------------------------------------------------
     Returns:
 
-    A scalar tensor whose sole entry holds the mean square data loss. """
+    A scalar tensor whose sole entry holds the mean square data loss. 
+    """
 
     # Evaluate U at the data points.
     U_Predict = U(Inputs).squeeze();
@@ -70,10 +72,11 @@ def Coll_Loss(
         LHS_Term    : Term,
         RHS_Terms   : List[Term],
         Device      : torch.device = torch.device('cpu')) -> Tuple[torch.Tensor, torch.Tensor]:
-    """ Let L(U) denote the library matrix (i,j entry is the jth RHS term
-    evaluated at the ith collocation point. Further, let b(U) denote the vector
-    whose ith entry is the LHS Term at the ith collocation point. Then
-    this function returns ||b(U) - L(U)Xi||_2
+    """ 
+    Let L(U) denote the library matrix (i,j entry is the jth RHS term evaluated
+    at the ith collocation point. Further, let b(U) denote the vector whose ith 
+    entry is the LHS Term at the ith collocation point. Then this function 
+    returns ||b(U) - L(U)Xi||_2
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -110,7 +113,8 @@ def Coll_Loss(
     contains the mean square collocation loss at the Coll_Points. The second is a
     1D tensor whose ith entry holds the PDE residual at the ith collocation
     point. You can safely discard the second return variable if you just want
-    to get the loss. """
+    to get the loss. 
+    """
 
     # Make sure Xi's length matches RHS_Terms'.
     assert(torch.numel(Xi) == len(RHS_Terms));
@@ -237,8 +241,8 @@ def Coll_Loss(
 
 
 def Lp_Loss(Xi : torch.Tensor, p : float):
-    """ This function approximates the L0 norm of Xi using the following
-    quantity:
+    """ 
+    This function approximates the L0 norm of Xi using the following quantity:
         w_1*|Xi[1]|^2 + w_2*|Xi[2]|^2 + ... + w_N*|Xi[N]|^2
     Where, for each k,
         w_k = 1/max{delta, |Xi[k]|^{p - 2}}.
@@ -255,7 +259,8 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
     Returns:
 
         w_1*|Xi[1]|^p + w_2*|Xi[2]|^p + ... + w_N*|Xi[N]|^p
-    where N is the number of components of Xi. """
+    where N is the number of components of Xi. 
+    """
 
     assert(p > 0 and p < 2)
 
@@ -291,8 +296,9 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
 
 def L0_Approx_Loss(Xi : torch.Tensor, s : float):
-    """ This function returns an approximation to the L0 norm of Xi. Notice that
-    if x is a real number then,
+    """ 
+    This function returns an approximation to the L0 norm of Xi. Notice that if 
+    x is a real number then,
             lim_{s -> 0} 1 - exp(-x^2/s) = { 0    if x = 0
                                            { 1    if x != 0
     Thus, if we choose s to be small, then
@@ -311,7 +317,8 @@ def L0_Approx_Loss(Xi : torch.Tensor, s : float):
     Returns:
 
         N - ( exp(-Xi_1^2/s^2) + exp(-Xi_2^2/s^2) + ... + exp(-Xi_N^2/s^2) )
-    where N is the number of components of Xi. """
+    where N is the number of components of Xi. 
+    """
 
     # s must be positive for the following to work.
     assert(s > 0);

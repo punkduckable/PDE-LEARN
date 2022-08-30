@@ -5,7 +5,8 @@ from    typing  import List, Dict, Callable;
 
 def Data_Loader(DataSet_Name   : str,
                 Device         : torch.device):
-    """ This function loads a DataSet from file, converts it contents to a torch
+    """ 
+    This function loads a DataSet from file, converts it contents to a torch
     Tensor, and returns the result.
 
     ----------------------------------------------------------------------------
@@ -32,7 +33,8 @@ def Data_Loader(DataSet_Name   : str,
         upper bounds of the problem domain along the ith axis.
 
         "Number Spatial Dimensions": An integer specifying the number of spatial
-        dimensions (one less than the number of rows in "Input Bounds").  """
+        dimensions (one less than the number of rows in "Input Bounds").  
+    """
 
     # Load the DataSet.
     DataSet_Path        = "../Data/DataSets/" + DataSet_Name + ".npz";

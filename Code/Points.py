@@ -8,9 +8,9 @@ def Generate_Points(
         Bounds     : numpy.array,
         Num_Points : int,
         Device     : torch.device = torch.device('cpu')) -> torch.Tensor:
-    """ This function generates a two-dimensional tensor, each row of which
-    holds a randomly generated coordinate that lies in the rectangle defined by
-    Bounds.
+    """ 
+    This function generates a two-dimensional tensor, each row of which holds a 
+    randomly generated coordinate that lies in the rectangle defined by Bounds.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -29,7 +29,8 @@ def Generate_Points(
     coordinate in the rectangle specified by Bounds. Suppose that
             Bounds = [[a_1, b_1], ... , [a_n, b_n]]
     Then the ith row of the returned tensor contains a coordinate that lies
-    within [a_1, b_1]x...x[a_n, b_n]. """
+    within [a_1, b_1]x...x[a_n, b_n]. 
+    """
 
 
     # First, determine the number of dimensions. This is just the number of rows

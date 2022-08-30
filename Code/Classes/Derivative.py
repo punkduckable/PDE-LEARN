@@ -3,7 +3,8 @@ import numpy;
 
 
 class Derivative():
-    """ Objects of this class house an abstract representation of a partial
+    """ 
+    Objects of this class house an abstract representation of a partial 
     derivative operator.
 
     ----------------------------------------------------------------------------
@@ -19,17 +20,20 @@ class Derivative():
     total number of partial derivatives we must take to apply a derivative
     operator to a function. We need this when computing the integral of a weight
     function times a library term (we apply integration by parts once for each
-    partial derivative in the Derivative operator). """
+    partial derivative in the Derivative operator).
+    """
 
 
     def __init__(   self,
                     Encoding : numpy.ndarray) -> None:
-        """ Initializer.
+        """ 
+        Initializer.
 
         ------------------------------------------------------------------------
         Arguments:
 
-        Encoding: See class docstring. """
+        Encoding: See class docstring. 
+        """
 
         # First, cast to integer array. This also returns a copy of Encoding.
         Encoding : numpy.ndarray = Encoding.astype(dtype = numpy.int32);
@@ -55,9 +59,11 @@ class Derivative():
 
 
     def __str__(self) -> str:
-        """ This function returns a string that contains a human-readable
+        """ 
+        This function returns a string that contains a human-readable
         expression for the derivative operator that this object represents. It
-        is mainly used for printing. """
+        is mainly used for printing. 
+        """
 
         Buffer : str = "";
 
@@ -93,8 +99,9 @@ class Derivative():
 
 
     def Is_Child_Of(self, D) -> bool:
-        """ This function determines if D is a "child" of the derivative
-        operator D. What does this mean? Let D_1 and D_2 be derivative objects.
+        """ 
+        This function determines if D is a "child" of the derivative operator 
+        D. What does this mean? Let D_1 and D_2 be derivative objects.
         Let [p_1, ... , p_n] and [q_1, ... , q_m] denote D_1's and D_2's
         encoding vectors, respectively. Let l = min{n, m}. D_1 is a child of
         D_2 if and only if for k \in {1, 2, ... , l}, p_k <= q_k and p_k for
@@ -111,7 +118,8 @@ class Derivative():
         ------------------------------------------------------------------------
         Returns:
 
-        A boolean; True if self is a child of D, False otherwise. """
+        A boolean; True if self is a child of D, False otherwise. 
+        """
 
         # First, find l, the minimum length of self.Encoding and D.Encoding.
         n : int = len(self.Encoding);
@@ -135,7 +143,9 @@ class Derivative():
 
 
 def Get_Order(D : Derivative):
-    """ This function returns D's order. This function exists only to enable
-    sorting with lists of derivative operators. """
+    """ 
+    This function returns D's order. This function exists only to enable
+    sorting with lists of derivative operators. 
+    """
 
     return D.Order;
