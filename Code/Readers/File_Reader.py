@@ -1,3 +1,7 @@
+from    typing import List, Dict;
+
+
+
 class Read_Error(Exception):
     # Raised if we can't find a Phrase in a File.
     pass;
@@ -59,7 +63,7 @@ def Index_After_Phrase(
         # so, check if  Line[i + j] == Phrase[j] for each for each j in {0,...
         # Num_Chars_Phrase - 1}.
         if(Line[i] == Phrase[0]):
-            Match : Bool = True;
+            Match : bool = True;
 
             for j in range(1, Num_Chars_Phrase):
                 # If Line[i + j] != Phrase[j], then we do not have a match and
@@ -75,7 +79,7 @@ def Index_After_Phrase(
                 return i + Num_Chars_Phrase;
 
     # If we're here, then Phrase is NOT a substring of Line. Return -1 to
-    # indiciate that.
+    # indicate that.
     return -1;
 
 
@@ -122,7 +126,7 @@ def Read_Line_After(
         Line = File.readline();
 
         # Check if we've reached the end of file. Python doesn't use end of file
-        # characters. However, readline will retun an empty string if and only
+        # characters. However, readline will return an empty string if and only
         # if we're at the end of File. Thus, we can use this as our "end of
         # file" check
         if(Line == ""):
@@ -160,7 +164,7 @@ def Read_Bool_Setting(File, Setting_Name : str) -> bool:
     File: The file we want to read the setting from.
 
     Setting_Name: The name of the setting we're reading. We need this in case
-    of an error, so that we can print the appropiate error message.
+    of an error, so that we can print the appropriate error message.
 
     ----------------------------------------------------------------------------
     Return:
@@ -171,7 +175,7 @@ def Read_Bool_Setting(File, Setting_Name : str) -> bool:
     Buffer = Read_Line_After(File, Setting_Name).strip();
 
     # Check if the setting is present. If not, the Buffer will be empty.
-    if  (len(Buffer) == 0):
+    if(len(Buffer) == 0):
         raise Read_Error("Missing Setting Value: You need to specify the \"%s\" setting" % Setting_Name);
 
     # Attempt to parse the result. Throw an error if we can't.
@@ -184,6 +188,105 @@ def Read_Bool_Setting(File, Setting_Name : str) -> bool:
 
 
 
+def Read_List_Setting(File, Setting_Name : str) -> List[str]:
+    """ Reads a setting whose value is a list. We return that list with each
+    list item stored as a string.
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    File: The file we want to read the setting from.
+
+    Setting_Name: The name of the setting we're reading. We need this in case
+    of an error, so that we can print the appropriate error message.
+
+    ----------------------------------------------------------------------------
+    Return:
+
+    A list whose ith element holds the ith element of the setting, stored as
+    a string. """
+
+    Buffer : str = Read_Line_After(File, Setting_Name).strip();
+
+    # Check if the setting is present. If not, the Buffer will be empty.
+    if(len(Buffer) == 0):
+        raise Read_Error("Missing Setting Value: You need to specify the \"%s\" setting" % Setting_Name);
+
+    # Now... let's parse the setting. To do this, we first need to remove the
+    # '[' and ']' characters at the start and end of the string, respectively
+    # (if they are present).
+    if(Buffer[0] == '['):
+        Buffer = Buffer[1:];
+    if(Buffer[-1] == ']'):
+        Buffer = Buffer[:-1];
+
+    # Now, split the string using the ',' character. Then, manually strip each entry.
+    List : List[str] = Buffer.split(',');
+    for i in range(len(List)):
+        List[i] = List[i].strip();
+
+    # All done!
+    return List;
+
+
+
+def Read_Dict_Setting(File, Setting_Name : str) -> Dict[str, str]:
+    """ Reads a setting whose value is a dictionary. We return a dictionary 
+    with the same keys and values. 
+
+    ----------------------------------------------------------------------------
+    Arguments:
+
+    File: The file we want to read the setting from.
+
+    Setting_Name: The name of the setting we're reading. We need this in case
+    of an error, so that we can print the appropriate error message.
+
+    ----------------------------------------------------------------------------
+    Return:
+
+    A dictionary with the same keys and values as the setting dictionary. All 
+    keys and values are strings. """
+
+    Buffer : str = Read_Line_After(File, Setting_Name).strip();
+
+    # Check if the setting is present. If not, the Buffer will be empty.
+    if(len(Buffer) == 0):
+        raise Read_Error("Missing Setting Value: You need to specify the \"%s\" setting" % Setting_Name);
+
+    # Now... let's parse the setting. To do this, we first need to remove the
+    # '{' and '}' characters at the start and end of the string, respectively
+    # (if they are present).
+    if(Buffer[0] == '{'):
+        Buffer = Buffer[1:];
+    if(Buffer[-1] == '}'):
+        Buffer = Buffer[:-1];
+
+    # Now, split the string using the ',' character. Then manually parse each 
+    # key/value pair.
+    Items : List[str] = Buffer.split(',');
+    Dict = {};
+    for i in range(len(Items)):
+        # Split the key from the value
+        Temp : List[str] = Items[i].split(':');
+        Key     : str = Temp[0].strip();
+        Value   : str = Temp[1].strip();
+
+        # Remove quotations from the Key, if they are present.
+        if(Key[0] == '\"' or Key[0] == '\''):
+            Key = Key[1:];
+        if(Key[-1] == '\"' or Key[0] == '\''):
+            Key = Key[:-1];
+
+        # Set dictionary key/value pair.
+        Dict[Key]       = Value;
+
+    # All done!
+    return Dict;
+
+
+
+
 def Read_Setting(File, Setting_Name : str) -> str:
     """ Reads a non-boolean setting from File.
 
@@ -193,7 +296,7 @@ def Read_Setting(File, Setting_Name : str) -> str:
     File: The file we want to read the setting from.
 
     Setting_Name: The name of the setting we're reading. We need this in case
-    of an error, so that we can print the appropiate error message.
+    of an error, so that we can print the appropriate error message.
 
     ----------------------------------------------------------------------------
     Return:
