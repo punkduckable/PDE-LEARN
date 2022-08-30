@@ -208,7 +208,7 @@ def Coll_Loss(
         T_j     : Term          = RHS_Terms[j];
 
         # Initialize a tensor to hold T_j(U).
-        T_j_U   : torch.Tesnor  = torch.ones_like(U_Coords);
+        T_j_U   : torch.Tensor  = torch.ones_like(U_Coords);
 
         # Cycle through T_j's sub-terms.
         for i in range(T_j.Num_Sub_Terms):
@@ -259,7 +259,7 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
     assert(p > 0 and p < 2)
 
-    # First, square the components of Xi. Also, make a doule precision copy of
+    # First, square the components of Xi. Also, make a double precision copy of
     # Xi that is detached from Xi's graph.
     delta : float = .0000001;
     Xi_2          = torch.mul(Xi, Xi);
@@ -275,10 +275,10 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
         # Now, evaluate W[k].
         W_k  = 1./max(delta, Abs_Xi_k**(2 - p));
 
-        # Check for infinity (which can happen, unfortuneatly, if delta is too
+        # Check for infinity (which can happen, unfortunately, if delta is too
         # small). If so, remedy it.
         if(math.isinf(W_k)):
-            print("W_k got to infinty");
+            print("W_k got to infinity");
             print("Abs_Xi_k = %f" % Abs_Xi_k);
             W_k = 0;
 

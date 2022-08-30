@@ -17,9 +17,10 @@ import  time;
 from    typing import List, Dict, Callable;
 
 from Settings_Reader    import Settings_Reader;
+from Library_Reader     import Read_Library;
 from Data_Loader        import Data_Loader;
 from Derivative         import Derivative;
-from Term               import Term;
+from Term               import Term, Build_Term_From_State;
 from Network            import Rational, Network;
 from Test_Train         import Testing, Training;
 from Loss               import Data_Loss, Lp_Loss, Coll_Loss;
@@ -48,7 +49,7 @@ def main():
 
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
-    print("Setting up... ", end = '');
+    print("\nSetting up...\n");
 
 
     ############################################################################
@@ -64,50 +65,120 @@ def main():
     # Get the number of input dimensions.
     Settings["Num Spatial Dimensions"] : int        = Data_Dict["Number Spatial Dimensions"]
 
-    # Now, determine how many library terms we have. This determines Xi's size.
-    Num_Library_Terms : int = len(Settings["RHS Terms"])
-
 
     ############################################################################
-    # Set up U and Xi.
+    # Set up U, Xi, Library
 
-    # Set up Widths. This is an array whose ith entry specifies the width of 
-    # the ith layer of the network (including the input and output layers).
-    Widths = [Settings["Num Spatial Dimensions"] + 1] + Settings["Hidden Layer Widths"] + [1];
-    
-    U = Network(    Widths              = Widths,
-                    Activation_Function = Settings["Activation Function"],
-                    Device              = Settings["Device"]);
-
-    # We set up Xi as a Parameter for.... complicated reasons. In pytorch, a
-    # parameter is basically a special tensor that is supposed to be a trainable
-    # part of a module. It acts just like a regular tensor, but almost always
-    # has requires_grad set to true. Further, since it's a sub-class of Tensor,
-    # we can distinguish it from regular Tensors. In particular, optimizers
-    # expect a list or dictionary of Parameters... not Tensors. Since we want
-    # to train Xi, we set it up as a Parameter.
-    Xi = torch.zeros(   Num_Library_Terms,
-                        dtype           = torch.float32,
-                        device          = Settings["Device"],
-                        requires_grad   = True);
-
-
-    ############################################################################
-    # Load U, Xi
-
-    # First, check if we should load Xi, U from file. If so, load them!
-    if( Settings["Load U"]      == True or
-        Settings["Load Xi"]     == True):
+    # First, if we are loading anything, load in the save.
+    if( Settings["Load U"]              == True or 
+        Settings["Load Xi, Library"]    == True or
+        Settings["Load Optimizer"]      == True):
 
         # Load the saved checkpoint. Make sure to map it to the correct device.
         Load_File_Path : str = "../Saves/" + Settings["Load File Name"];
         Saved_State = torch.load(Load_File_Path, map_location = Settings["Device"]);
 
-        if(Settings["Load U"] == True):
-            U.load_state_dict(Saved_State["U"]);
 
-        if(Settings["Load Xi"] == True):
-            Xi = Saved_State["Xi"];
+    # First, either build U or load its state from save. 
+    if(Settings["Load U"] == True):
+        # First, fetch Widths and Activation functions from U's State.
+        U_State             : Dict      = Saved_State["U State"];
+        Widths              : List[int] = U_State["Widths"];
+        Hidden_Activation   : str       = U_State["Activation Types"][0];
+        Output_Activation   : str       = U_State["Activation Types"][-1];
+
+        Settings["Hidden Activation Function"]  = Hidden_Activation;
+
+        # Initialize U.
+        U = Network(    Widths              = Widths, 
+                        Hidden_Activation   = Hidden_Activation, 
+                        Output_Activation   = Output_Activation,
+                        Device              = Settings["Device"]);
+    
+        # Finally, load U's state.
+        U.Set_State(Saved_State["U State"]);
+
+        print("Loaded U from state.  ");
+
+    else:
+        # First, set up Widths. This is an array whose ith entry specifies the width of 
+        # the ith layer of the network (including the input and output layers).
+        Widths = [Settings["Num Spatial Dimensions"] + 1] + Settings["Hidden Layer Widths"] + [1];
+        
+        # Now initialize U.
+        U = Network(    Widths              = Widths,
+                        Hidden_Activation   = Settings["Hidden Activation Function"],
+                        Device              = Settings["Device"]);
+        
+        print("Set up U using settings in Settings.txt.")
+
+    # Report!
+    print("    Hidden Activation: %s" % Settings["Hidden Activation Function"]);
+    print("    Widths:            ", end = '');
+    for i in range(len(Widths)):
+        print(str(Widths[i]), end = '');
+
+        if(i != len(Widths) - 1):  
+            print(", ", end = '');
+        else:
+            print("\n");
+
+
+    # Second, either build Xi + the library or load it from save.
+    if(Settings["Load Xi, Library"] == True):
+        # First, load Xi.
+        Xi : torch.Tensor = Saved_State["Xi"];
+
+        # Next, load the derivatives
+        Derivatives     : List[Derivative]  = [];
+        Num_Derivatives : int               = len(Saved_State["Derivative Encodings"]);
+        for i in range(Num_Derivatives):
+            Derivatives.append(Derivative(Encoding = Saved_State["Derivative Encodings"][i]));
+        
+        Settings["Derivatives"] = Derivatives;
+        
+        # Finally, load the library (LHS term and RHS Terms)
+        Settings["LHS Term"] = Build_Term_From_State(State = Saved_State["LHS Term State"]);
+
+        RHS_Terms       : List[Term]    = [];
+        Num_RHS_Terms   : int           = len(Saved_State["RHS Term States"]);
+        for i in range(Num_RHS_Terms):
+            RHS_Terms.append(Build_Term_From_State(State = Saved_State["RHS Term States"][i]));
+        
+        Settings["RHS Terms"] = RHS_Terms;
+
+        print("Loaded Xi, Library from file.")
+
+    else:
+        # First, read the library.
+        Derivatives, LHS_Term, RHS_Terms    = Read_Library(Settings["Library Path"]);
+        Settings["Derivatives"]             = Derivatives;
+        Settings["LHS Term"]                = LHS_Term;
+        Settings["RHS Terms"]               = RHS_Terms;
+
+        # Next, determine how many library terms we have. This determines Xi's 
+        # size.
+        Num_RHS_Terms : int = len(Settings["RHS Terms"]);
+
+        # Since we want to learn Xi, we set its requires_Grad to true.
+        Xi = torch.zeros(   Num_RHS_Terms,
+                            dtype           = torch.float32,
+                            device          = Settings["Device"],
+                            requires_grad   = True);
+                    
+        print("Build Xi, Library using settings in Settings.txt");
+    
+    # Report!
+    print("    LHS Term:               %s" % str(Settings["LHS Term"]))
+    print("    RHS Terms (%3u total): " % Num_RHS_Terms, end = '');
+
+    for i in range(Num_RHS_Terms):
+        print(str(Settings["RHS Terms"][i]), end = '');
+        
+        if(i != Num_RHS_Terms - 1):
+            print(", ", end = '');
+        else:
+            print("\n");
 
 
     ############################################################################
@@ -119,7 +190,7 @@ def main():
     Params = list(U.parameters());
     Params.append(Xi);
 
-    if  (Settings["Optimizer"] == "Adam"):
+    if(  Settings["Optimizer"] == "Adam"):
         Optimizer = torch.optim.Adam( Params,   lr = Settings["Learning Rate"]);
     elif(Settings["Optimizer"] == "LBFGS"):
         Optimizer = torch.optim.LBFGS(Params,   lr = Settings["Learning Rate"]);
@@ -129,10 +200,6 @@ def main():
 
 
     if(Settings["Load Optimizer"]  == True ):
-        # Load the saved checkpoint. Make sure to map it to the correct device.
-        Load_File_Path : str = "../Saves/" + Settings["Load File Name"];
-        Saved_State = torch.load(Load_File_Path, map_location = Settings["Device"]);
-
         # Now load the optimizer.
         Optimizer.load_state_dict(Saved_State["Optimizer"]);
 
@@ -141,7 +208,7 @@ def main():
             param_group['lr'] = Settings["Learning Rate"];
 
     # Setup is now complete. Report time.
-    print("Done! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
+    print("Set up complete! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
 
 
     ############################################################################
@@ -269,8 +336,7 @@ def main():
 
     # Report runtime!
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
-    print("Done! It took %7.2fs," % Epoch_Runtime);
-    print("an average of %7.2fs per epoch." % (Epoch_Runtime / Settings["Num Epochs"]));
+    print("Done! It took %7.2fs, an average of %7.2fs per epoch)" % (Epoch_Runtime,  (Epoch_Runtime / Settings["Num Epochs"])));
 
 
     ############################################################################
@@ -306,6 +372,7 @@ def main():
     # Report final PDE
 
     # Print the LHS Term.
+    print();
     print(Settings["LHS Term"], end = '');
     print(" = ");
 
@@ -324,7 +391,7 @@ def main():
     ############################################################################
     # Save.
 
-    print("Saving...", end = '');
+    print("\nSaving...", end = '');
 
     # First, come up with a save name that does not conflict with an existing
     # save name. To do this, we first attempt to make a save file name that
@@ -333,7 +400,7 @@ def main():
     # end of the file name. If that also corresponds to an existing save, then
     # we replace the "1" with a "2" and so on until we get save name that does
     # not already exist.
-    Base_File_Name : str = Settings["DataSet Name"] + "_" + Settings["Activation Function"] + "_" + Settings["Optimizer"]
+    Base_File_Name : str = Settings["DataSet Name"] + "_" + Settings["Hidden Activation Function"] + "_" + Settings["Optimizer"]
 
     Counter         : int = 0;
     Save_File_Name  : str = Base_File_Name;
@@ -342,10 +409,25 @@ def main():
         Counter         += 1;
         Save_File_Name   = Base_File_Name + ("_%u" % Counter);
 
+    # Next, get the encoding vectors for each element of Derivatives.
+    Derivative_Encodings : List[numpy.ndarray] = [];
+    for i in range(len(Settings["Derivatives"])):
+        Derivative_Encodings.append(Settings["Derivatives"][i].Encoding)
+
+    # Finally, get the state of each library term.
+    RHS_Term_States : List[Dict] = [];
+    for i in range(len(Settings["RHS Terms"])):
+        RHS_Term_States.append(Settings["RHS Terms"][i].Get_State());
+
+    LHS_Term_State : Dict = Settings["LHS Term"].Get_State();    
+
     # We can now save!
-    torch.save({"U"         : U.state_dict(),
-                "Xi"        : Xi,
-                "Optimizer" : Optimizer.state_dict()},
+    torch.save({"U State"               : U.Get_State(),
+                "Xi"                    : Xi,
+                "Optimizer"             : Optimizer.state_dict(),
+                "Derivative Encodings"  : Derivative_Encodings,
+                "LHS Term State"        : LHS_Term_State,
+                "RHS Term States"       : RHS_Term_States},
                 "../Saves/" + Save_File_Name);
 
     print("Done! Saved as \"%s\"" % Save_File_Name);

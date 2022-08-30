@@ -23,7 +23,7 @@ def Derivative_From_Derivative(
         Coords      : torch.Tensor) -> torch.Tensor:
     """ This function applies the derivative operator Da to U. It does so,
     however, by calculating Da U from Db U, where Db is a partial derivative
-    operator that is "child derivative" of Da. This means that Da's Econding
+    operator that is "child derivative" of Da. This means that Da's Encoding
     vector is >= (element-wise ) and Db's. If this is the case, then we can
     compute Da U from Db U, which is precisely what this function does. To see
     how, suppose that Da.Encoding = [p_1, ... , p_n], and Db.Encoding = [q_1,
@@ -33,7 +33,7 @@ def Derivative_From_Derivative(
     This allows us to calculate Da U without having to re-do all the
     computations needed to compute Db U.
 
-    Note: This function assumes that we computed Db U at Coords. This funciton
+    Note: This function assumes that we computed Db U at Coords. This function
     also assumes the graph from Coords to Db_U exists (we need this to compute
     further derivatives). Finally, this function assumes Coords has
     requires grad set to true (and, in particular, had this set to true you
@@ -68,7 +68,7 @@ def Derivative_From_Derivative(
     # Now, let's get to work. The plan is the following: Since Db is a child of
     # Da, there is some derivative operator, Dc, such that
     #       Da = Dc Db
-    # In partuclar, if Da.Encoding = [p_1, ... , p_n] and Db.Encoding = [q_1,
+    # In particular, if Da.Encoding = [p_1, ... , p_n] and Db.Encoding = [q_1,
     # ... , q_m], then Dc.Encoding = [p_1 - q_1, ... , p_l - q_l], where
     # l = min{n, m}. Thus, to compute Da U from Db U, we first compute
     #       D_t^{p_1 - q_1} Da U.

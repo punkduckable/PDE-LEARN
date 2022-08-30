@@ -67,9 +67,9 @@ def Settings_Reader() -> Dict:
         # Which activation function should we use?
         Buffer = Read_Setting(File, "Hidden Activation Function [str]:");
         if  (Buffer[0] == 'R' or Buffer[0] == 'r'):
-            Settings["Activation Function"] = "Rational";
+            Settings["Hidden Activation Function"] = "Rational";
         elif(Buffer[0] == 'T' or Buffer[0] == 't'):
-            Settings["Activation Function"] = "Tanh";
+            Settings["Hidden Activation Function"] = "Tanh";
         elif(Buffer[0] == 'S' or Buffer[0] == 's'):
             Settings["Hidden Activation Function"] = "Sin";
         else:

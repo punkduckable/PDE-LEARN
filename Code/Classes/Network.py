@@ -164,7 +164,7 @@ class Network(torch.nn.Module):
             return torch.nn.ELU();
         elif(Processed_Encoding == "softmax"):
             return torch.nn.Softmax();
-        elif(Processed_Encoding == "Rational"):
+        elif(Processed_Encoding == "rational"):
             return Rational(Device = Device);
         else:
             print("Unknown Activation Function. Got %s" % Encoding);
@@ -244,7 +244,7 @@ class Network(torch.nn.Module):
         # state differently from those without one.
         Activation_Types    : List[str]     = [];
         Activation_States   : List[dict]    = [];
-        for i in range(len(self.Num_Layers)):
+        for i in range(self.Num_Layers):
             Activation_Types.append(self._Get_Activation_String(self.Activation_Functions[i]));
             Activation_States.append(self.Activation_Functions[i].state_dict());
         
