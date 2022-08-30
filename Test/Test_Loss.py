@@ -1,4 +1,4 @@
-# Nonsense to add Code diectory to the Python search path.
+# Nonsense to add Code directory to the Python search path.
 import os
 import sys
 
@@ -14,21 +14,22 @@ sys.path.append(Code_Path);
 sys.path.append(Classes_Path);
 
 # external libraries and stuff.
-import numpy;
-import torch;
-import unittest;
-import random;
-import math;
+import  numpy;
+import  torch;
+import  unittest;
+import  random;
+import  math;
+from    typing  import List;
 
 # Code files.
-from Derivative import Derivative;
-from Term       import Term;
-from Loss       import Coll_Loss, L0_Approx_Loss, Lp_Loss;
-from Points     import Generate_Points;
-from Evaluate_Derivatives import Derivative_From_Derivative;
+from    Derivative  import Derivative;
+from    Term        import Term;
+from    Loss        import Coll_Loss, L0_Approx_Loss, Lp_Loss;
+from    Points      import Generate_Points;
+from    Evaluate_Derivatives import Derivative_From_Derivative;
 
 # Other test file.
-from Polynomials import Polynomial_2D, Polynomial_3D;
+from    Polynomials import Polynomial_2D, Polynomial_3D;
 
 
 
@@ -68,7 +69,7 @@ class Loss_Test(unittest.TestCase):
         T_4 : Term = Term(Derivatives = [Dx3],      Powers = [1]);
         T_5 : Term = Term(Derivatives = [I, Dx],    Powers = [1, 2]);
 
-        RHS_Terms : List[Terms] = [T_1, T_2, T_3, T_4, T_5];
+        RHS_Terms : List[Term] = [T_1, T_2, T_3, T_4, T_5];
 
         # Now, evaluate each derivative of U at the Coords. (another test
         # verifies that this function works)
@@ -246,7 +247,7 @@ class Loss_Test(unittest.TestCase):
 
 
         ########################################################################
-        # Test 2 : All componnts of Xi are the same.
+        # Test 2 : All components of Xi are the same.
 
         # Now replace Xi with a randomly selected value.
         x  = random.uniform(.5, 1.5);

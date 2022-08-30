@@ -1,5 +1,7 @@
 import torch;
 
+
+
 class Polynomial_2D:
     def __init__(self, n : int):
         self.n = n;

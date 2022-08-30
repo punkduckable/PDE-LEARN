@@ -1,4 +1,4 @@
-# Nonsense to add Code diectory to the Python search path.
+# Nonsense to add Code directory to the Python search path.
 import os
 import sys
 
