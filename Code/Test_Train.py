@@ -13,13 +13,13 @@ import  numpy as np;
 import  torch;
 from    typing     import List, Tuple, Dict, Callable;
 
-from Network    import Neural_Network;
+from Network    import Network;
 from Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
 from Derivative import Derivative;
 from Term       import Term;
 
 
-def Training(   U               : Neural_Network,
+def Training(   U               : Network,
                 Xi              : torch.Tensor,
                 Coll_Points     : torch.Tensor,
                 Inputs          : torch.Tensor,
@@ -28,7 +28,7 @@ def Training(   U               : Neural_Network,
                 LHS_Term        : Term,
                 RHS_Terms       : List[Term],
                 p               : float,
-                Lambda          : float,
+                Weights         : Dict[str, float],
                 Optimizer       : torch.optim.Optimizer,
                 Device          : torch.device = torch.device('cpu')) -> Dict:
     """ This function runs one epoch of training. We enforce the learned PDE
@@ -40,7 +40,7 @@ def Training(   U               : Neural_Network,
 
     U: The network that approximates the PDE solution.
 
-    Xi: The vector that stores the coeffcients of the library terms.
+    Xi: The vector that stores the coefficients of the library terms.
 
     Coll_Points: the collocation points at which we enforce the learned
     PDE. If U accepts d spatial coordinates, then this should be a d+1 column
@@ -50,7 +50,7 @@ def Training(   U               : Neural_Network,
     Inputs: A tensor holding the coordinates of the points at which we
     compare the approximate solution to the true one. If U accepts d spatial
     coordinates, then this should be a d+1 column tensor whose ith row holds the
-    t, x_1,... x_d coordinates of the ith Datapoint.
+    t, x_1,... x_d coordinates of the ith Data-point.
 
     Targets: A tensor holding the value of the true solution at the data
     points. If Inputs has N rows, then this should be an N element tensor
@@ -71,7 +71,10 @@ def Training(   U               : Neural_Network,
     RHS_Terms : A list of Term objects whose ith entry represents T_i in the
     equation above.
 
-    p, Lambda: the settings value for p and Lambda (in the loss function).
+    p: the settings value for p in "Lp" loss function.
+    
+    Weights: A dictionary of floats. It should have keys for "Lp", "Coll", and 
+    "Data".
 
     Optimizer: the optimizer we use to train U and Xi. It should have
     been initialized with both network's parameters.
@@ -126,7 +129,7 @@ def Training(   U               : Neural_Network,
         Lp_Loss_Value    = Lp_Loss(     Xi      = Xi,
                                         p       = p);
 
-        Total_Loss       = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
+        Total_Loss       = Weights["Data"]*Data_Loss_Value + Weights["Coll"]*Coll_Loss_Value + Weights["Lp"]*Lp_Loss_Value;
 
         # Store their values in the buffers.
         Residual_Buffer[:]   = Residual;
@@ -135,7 +138,7 @@ def Training(   U               : Neural_Network,
         Lp_Loss_Buffer[:]    = Lp_Loss_Value;
         Total_Loss_Buffer[:] = Total_Loss;
 
-        # Back-propigate to compute gradients of Total_Loss with respect to
+        # Back-propagate to compute gradients of Total_Loss with respect to
         # network parameters (only do if this if the loss requires grad)
         if (Total_Loss.requires_grad == True):
             Total_Loss.backward();
@@ -154,8 +157,8 @@ def Training(   U               : Neural_Network,
 
 
 
-def Testing(    U               : Neural_Network,
-                Xi              : Neural_Network,
+def Testing(    U               : Network,
+                Xi              : Network,
                 Coll_Points     : torch.Tensor,
                 Inputs          : torch.Tensor,
                 Targets         : torch.Tensor,
@@ -163,7 +166,7 @@ def Testing(    U               : Neural_Network,
                 LHS_Term        : Term,
                 RHS_Terms       : List[Term],
                 p               : float,
-                Lambda          : float,
+                Weights         : Dict[str, float],
                 Device          : torch.device = torch.device('cpu')) -> Dict[str, float]:
     """ This function evaluates the losses.
 
@@ -176,7 +179,7 @@ def Testing(    U               : Neural_Network,
 
     U: The network that approximates the PDE solution.
 
-    Xi: The vector that stores the coeffcients of the library terms.
+    Xi: The vector that stores the coefficients of the library terms.
 
     Coll_Points: the collocation points at which we enforce the learned
     PDE. If U accepts d spatial coordinates, then this should be a d+1 column
@@ -186,7 +189,7 @@ def Testing(    U               : Neural_Network,
     Inputs: A tensor holding the coordinates of the points at which we
     compare the approximate solution to the true one. If u accepts d spatial
     coordinates, then this should be a d+1 column tensor whose ith row holds the
-    t, x_1,... x_d coordinates of the ith Datapoint.
+    t, x_1,... x_d coordinates of the ith Data-point.
 
     Targets: A tensor holding the value of the true solution at the data
     points. If Targets has N rows, then this should be an N element tensor
@@ -240,7 +243,7 @@ def Testing(    U               : Neural_Network,
     Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
                                         p     = p);
 
-    Total_Loss : float = Data_Loss_Value + Coll_Loss_Value + Lambda*Lp_Loss_Value;
+    Total_Loss : float = Weights["Data"]*Data_Loss_Value + Weights["Coll"]*Coll_Loss_Value + Weights["Lp"]*Lp_Loss_Value;
 
     # Return the losses.
     return {"Data Loss"     : Data_Loss_Value.item(),

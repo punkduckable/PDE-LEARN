@@ -12,23 +12,23 @@ sys.path.append(Classes_Path);
 import  numpy;
 import  torch;
 import  math;
-from    typing import Tuple, List;
+from    typing import Tuple, List, Dict;
 
 from Derivative             import Derivative;
 from Term                   import Term;
-from Network                import Neural_Network;
+from Network                import Network;
 from Evaluate_Derivatives   import Derivative_From_Derivative;
 
 
 
 def Data_Loss(
-        U           : Neural_Network,
+        U           : Network,
         Inputs      : torch.Tensor,
         Targets     : torch.Tensor) -> torch.Tensor:
     """ This function evaluates the data loss, which is the mean square
     error between U at the Inputs, and the Targets. To do this, we
-    first evaluate U at the data points. At each point (t, x), we then
-    evaluate |U(t, x) - U'_{t, x}|^2, where U'_{t,x} is the data point
+    first evaluate U at the data points. At each point (t, x), we then 
+    evaluate |U(t, x) - U'_{t, x}|2, where U'_{t,x} is the data point
     corresponding to (t, x). We sum up these values and then divide by the
     number of data points.
 
@@ -54,7 +54,7 @@ def Data_Loss(
     # Evaluate U at the data points.
     U_Predict = U(Inputs).squeeze();
 
-    # Evaluate the pointwise square difference of U_Predict and Targets.
+    # Evaluate the point-wise square difference of U_Predict and Targets.
     Square_Error = ( U_Predict - Targets ) ** 2;
 
     # Return the mean square error.
@@ -63,7 +63,7 @@ def Data_Loss(
 
 
 def Coll_Loss(
-        U           : Neural_Network,
+        U           : Network,
         Xi          : torch.Tensor,
         Coll_Points : torch.Tensor,
         Derivatives : List[Derivative],

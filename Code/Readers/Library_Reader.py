@@ -1,4 +1,4 @@
-# Nonsense to add Code diectory to the Python search path.
+# Nonsense to add Code directory to the Python search path.
 import os
 import sys
 
@@ -12,7 +12,7 @@ sys.path.append(Classes_Path);
 import  numpy;
 from    typing          import List, Tuple, Dict;
 
-from    File_Reader     import End_Of_File_Error, Read_Line_After;
+from    File_Reader     import End_Of_File_Error, Read_Line_After, Read_Error;
 from    Derivative      import Derivative, Get_Order;
 from    Term            import Term;
 
@@ -166,7 +166,7 @@ def Read_Term(File) -> Term:
     # Look for the next line that contains a library function.
     Line : str = "";
     while(True):
-        # Get a candidiate line. This eliminates all lines that start with a
+        # Get a candidate line. This eliminates all lines that start with a
         # comment or are blank. It will not, however, eliminate lines filled
         # with whitespace.
         Line = Read_Line_After( File    = File,

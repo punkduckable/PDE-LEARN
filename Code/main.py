@@ -20,7 +20,7 @@ from Settings_Reader    import Settings_Reader;
 from Data_Loader        import Data_Loader;
 from Derivative         import Derivative;
 from Term               import Term;
-from Network            import Rational, Neural_Network;
+from Network            import Rational, Network;
 from Test_Train         import Testing, Training;
 from Loss               import Data_Loss, Lp_Loss, Coll_Loss;
 from Points             import Generate_Points;
@@ -71,16 +71,16 @@ def main():
     ############################################################################
     # Set up U and Xi.
 
-    U = Neural_Network(
-            Num_Hidden_Layers   = Settings["Num Hidden Layers"],
-            Neurons_Per_Layer   = Settings["Units Per Layer"],
-            Input_Dim           = Settings["Num Spatial Dimensions"] + 1,
-            Output_Dim          = 1,
-            Activation_Function = Settings["Activation Function"],
-            Device              = Settings["Device"]);
+    # Set up Widths. This is an array whose ith entry specifies the width of 
+    # the ith layer of the network (including the input and output layers).
+    Widths = [Settings["Num Spatial Dimensions"] + 1] + Settings["Hidden Layer Widths"] + [1];
+    
+    U = Network(    Widths              = Widths,
+                    Activation_Function = Settings["Activation Function"],
+                    Device              = Settings["Device"]);
 
     # We set up Xi as a Parameter for.... complicated reasons. In pytorch, a
-    # paramater is basically a special tensor that is supposed to be a trainable
+    # parameter is basically a special tensor that is supposed to be a trainable
     # part of a module. It acts just like a regular tensor, but almost always
     # has requires_grad set to true. Further, since it's a sub-class of Tensor,
     # we can distinguish it from regular Tensors. In particular, optimizers
@@ -163,7 +163,7 @@ def main():
                                                    "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
 
     # Epochs!!!
-    print("Running %d epochs..." % Settings["Num Epochs"]);
+    print("\nRunning %d epochs..." % Settings["Num Epochs"]);
     for t in range(0, Settings["Num Epochs"]):
         ########################################################################
         # Train
@@ -188,7 +188,7 @@ def main():
                                 LHS_Term    = Settings["LHS Term"],
                                 RHS_Terms   = Settings["RHS Terms"],
                                 p           = Settings["p"],
-                                Lambda      = Settings["Lambda"],
+                                Weights     = Settings["Weights"],
                                 Optimizer   = Optimizer,
                                 Device      = Settings["Device"]);
 
@@ -219,7 +219,7 @@ def main():
                                 LHS_Term    = Settings["LHS Term"],
                                 RHS_Terms   = Settings["RHS Terms"],
                                 p           = Settings["p"],
-                                Lambda      = Settings["Lambda"],
+                                Weights     = Settings["Weights"],
                                 Device      = Settings["Device"]);
 
         Test_Losses["Data Losses"][t]   = Test_Dict["Data Loss"];
@@ -258,7 +258,7 @@ def main():
         if(t % 10 == 0 or t == Settings["Num Epochs"] - 1):
             # Note: When we print this, the testing/training Lp losses tend to
             # be different. This is because the Training loss is evaluated
-            # before backprop, while the Testing loss is evaluated after it (and
+            # before back-prop, while the Testing loss is evaluated after it (and
             # Xi has been updated).
             print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
                 % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Lp Loss"], Train_Dict["Total Loss"]));
@@ -283,7 +283,7 @@ def main():
     # where each w_i is updated each step to be w_i = [Xi]_i^{2 - p}. The above
     # is convex (if we treat w_1, ... , w_n as constants). There is, however, a
     # problem. If [Xi]_i is smaller than about 3e-4, then [Xi]_i^2 is roughly
-    # machine epilon, meaning we run into problems. To aboid this, we instead
+    # machine Epsilon, meaning we run into problems. To avoid this, we instead
     # define
     #       w_i = max{1e-7, [Xi]_i^{p - 2}}.
     # The issue with this approach is that the Lp loss can't really resolve
@@ -324,6 +324,8 @@ def main():
     ############################################################################
     # Save.
 
+    print("Saving...", end = '');
+
     # First, come up with a save name that does not conflict with an existing
     # save name. To do this, we first attempt to make a save file name that
     # consists of the data set name plus the activation function and optimizer
@@ -346,6 +348,7 @@ def main():
                 "Optimizer" : Optimizer.state_dict()},
                 "../Saves/" + Save_File_Name);
 
+    print("Done! Saved as \"%s\"" % Save_File_Name);
 
 
 if(__name__ == "__main__"):

@@ -8,6 +8,7 @@ Load Optimizer From Save [bool]:                 False
     Load File Name [str]:                        Test
 
 
+
 ################################################################################
 # Library Settings.
 
@@ -21,8 +22,7 @@ Library File [str]:                              Library
 # Network settings.
 
 # U network.
-Number of Hidden Layers [int]:                   5
-Hidden Units per Hidden Layer [int]:             20
+Hidden Layer Widths [List of int]:               20, 20, 20, 20, 20
 Activation Function [Tanh, Rational, Sin]:       Rat
 
 # Device settings.
@@ -34,8 +34,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Lambda [float]:                                  .0005
-
+Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0005}
 
 Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
