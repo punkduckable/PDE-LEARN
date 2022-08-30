@@ -1,5 +1,5 @@
 import  numpy;
-from    typing      import List;
+from    typing      import List, Dict;
 
 from    Derivative  import Derivative;
 
@@ -28,6 +28,8 @@ class Term():
 
     Num_Sub_Terms : The number of sub terms in the Term. Equivalently, the
     length of Derivatives and Powers.  """
+
+
 
     def __init__(   self,
                     Derivatives :   List[Derivative],
@@ -85,6 +87,34 @@ class Term():
 
 
 
+    def Get_State(self) -> Dict:
+        """
+        This function helps serialize self. It returns a dictionary that can be
+        used to create self from scratch. You can recover a copy of self by 
+        passing this dictionary to the Build_Term_From_State function.
+        
+        -----------------------------------------------------------------------
+        Returns:
+
+        A dictionary with two keys, "Derivatives" and "Powers". The former is a
+        list whose ith entry holds the Encoding array for the ith library term.
+        The latter is simply self's power attribute.
+        """
+
+        # We can start things off with the Powers attribute.
+        State : Dict = {"Powers" : self.Powers};
+
+        # We can now build the derivatives attribute.
+        Encodings : List[numpy.ndarray] = [];
+        for i in range(len(self.Derivatives)):
+            Encodings.append(self.Derivatives[i].Encoding);
+        
+        State["Derivative Encodings"] = Encodings;
+
+        return State;
+
+
+
     def __str__(self) -> str:
         """ This function returns a human-readable form of the term that self
         represents. """
@@ -108,3 +138,36 @@ class Term():
 
         # All done! Return!
         return Buffer;
+
+
+
+def Build_Term_From_State(State : Dict) -> Term:
+    """
+    This function builds a new term object from a State dictionary. It then
+    returns that object. 
+
+    ---------------------------------------------------------------------------
+    Arguments:
+
+    State: A dictionary. This should either be the dictionary returned by the 
+    Get_State method, or an unpickled copy of one. 
+
+    ---------------------------------------------------------------------------
+    Returns:
+
+    A new Term object whose derivatives and powers are specified in State.
+    """
+
+    # To build a State object, we need to build the "Powers"and "Derivatives" 
+    # variables. State contains both, but the latter is stored as a list of 
+    # Encoding vectors (we need to build the actual derivatives ourselves)
+    Powers          : List[int]         = State["Powers"];
+    Derivatives     : List[Derivative]  = [];
+
+    Num_Derivatives = len(State["Derivative Encodings"]);
+    for i in range(Num_Derivatives):
+        # build the ith derivative, append it to the List.
+        Derivatives.append(Derivative(Encoding = State["Derivative Encodings"][i]));
+    
+    # We can now build the Term object.
+    return Term(Derivatives = Derivatives, Powers = Powers);

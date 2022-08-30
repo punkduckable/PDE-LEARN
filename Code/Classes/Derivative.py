@@ -41,7 +41,7 @@ class Derivative():
         Input_Dim : int  = Encoding.size;
         assert(Input_Dim == 2 or Input_Dim == 3 or Input_Dim == 4);
 
-        # Calculate the order (total number of patial derivatives) of this
+        # Calculate the order (total number of partial derivatives) of this
         # derivative operator.
         self.Order : int = numpy.sum(Encoding).item();
 
