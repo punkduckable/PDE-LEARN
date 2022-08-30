@@ -61,8 +61,9 @@ class Rational(torch.nn.Module):
 class Network(torch.nn.Module):
     def __init__(   self,
                     Widths              : List[int],
-                    Device              : torch.device = torch.device('cpu'),
-                    Activation_Function : str          = "Tanh"):
+                    Hidden_Activation   : str,
+                    Output_Activation   : str           = "None",
+                    Device              : torch.device  = torch.device('cpu')):
         """
         This is the initializer for the Network class.
         
@@ -73,10 +74,13 @@ class Network(torch.nn.Module):
         of the ith layer of the network, including the input and output layers
         (the input layer is the 0 layer).
 
-        Device: The device we want to load the network on.
-
-        Activation_Function: The activation function we use after each hidden 
+        Hidden_Activation: The activation function we use after each hidden 
         layer.
+
+        Output_Activation: The activation function we on the output layer. 
+        Default is "None".
+
+        Device: The device we want to load the network on.
         """
         
         for i in range(len(Widths)):
@@ -86,15 +90,13 @@ class Network(torch.nn.Module):
 
         # Define object attributes. Note that we only count layers with 
         # trainable parameters (the hidden and output layers). Thus, this does
-        # not include the input layer.
-        self.Input_Dim      : int = Widths[0];
-        self.Output_Dim     : int = Widths[-1];
-        self.Num_Layers     : int = len(Widths) - 1;
-
-        Num_Hidden_Layers   : int = self.Num_Layers - 1;
+        # not include the input layer.        
+        self.Widths             : List[int] = Widths; 
+        self.Num_Layers         : int       = len(Widths) - 1;
+        self.Num_Hidden_Layers  : int       = self.Num_Layers - 1;
 
 
-        ########################################################################
+        #######################################################################
         # Set up the Layers
 
         # Initialize the Layers. We hold all layers in a ModuleList.
@@ -109,34 +111,176 @@ class Network(torch.nn.Module):
                                     out_features    = Widths[i + 1],
                                     bias            = True).to(dtype = torch.float32, device = Device));
 
+        # Initialize the weight matrices, bias vectors.
+        for i in range(self.Num_Layers):
+            torch.nn.init.xavier_uniform_(  self.Layers[i].weight);
+            torch.nn.init.zeros_(           self.Layers[i].bias);
 
-        ########################################################################
+
+        #######################################################################
         # Set up Activation Functions
 
-        # Finally, set the Network's activation functions.
         self.Activation_Functions = torch.nn.ModuleList();
-        if  (Activation_Function == "Tanh"):
-            for i in range(Num_Hidden_Layers):
-                self.Activation_Functions.append(torch.nn.Tanh());
-        elif(Activation_Function == "Rational"):
-            for i in range(Num_Hidden_Layers):
-                self.Activation_Functions.append(Rational(Device = Device));
+        for i in range(self.Num_Hidden_Layers):
+            self.Activation_Functions.append(self._Get_Activation_Function(Encoding = Hidden_Activation, Device = Device));
+
+        self.Activation_Functions.append(self._Get_Activation_Function(Encoding = Output_Activation, Device = Device));
+
+
+
+    def _Get_Activation_Function(self, Encoding : str, Device : torch.device) -> torch.nn.Module:
+        """
+        An internal function which converts a string into its corresponding 
+        activation function.
+
+        -----------------------------------------------------------------------
+        Arguments:
+
+        Encoding: A string which specifies an activation function. Currently, 
+        the following Encodings are allowed:
+            "None"
+            "Elu"
+            "Tanh"
+            "Sigmoid"
+            "Rational"
+            "Softmax"
+        
+        -----------------------------------------------------------------------
+        Returns:
+
+        The corresponding activation function object (all activation classes
+        are sub-classes of torch.nn.Module).
+        """
+
+        Processed_Encoding : str = Encoding.strip().lower();
+
+        if(  Processed_Encoding == "none"):
+            return torch.nn.Identity();
+        elif(Processed_Encoding == "tanh"):
+            return torch.nn.Tanh();
+        elif(Processed_Encoding == "sigmoid"):
+            return torch.nn.Sigmoid();
+        elif(Processed_Encoding == "elu"):
+            return torch.nn.ELU();
+        elif(Processed_Encoding == "softmax"):
+            return torch.nn.Softmax();
+        elif(Processed_Encoding == "Rational"):
+            return Rational(Device = Device);
         else:
-            print("Unknown Activation Function. Got %s" % Activation_Function);
-            print("Thrown by Network.__init__. Aborting.");
+            print("Unknown Activation Function. Got %s" % Encoding);
             exit();
 
 
-        ########################################################################
-        # Initialize the weight matrices, bias vectors.
 
-        # If we're using Rational or Tanh networks, use xavier initialization.
-        if(Activation_Function == "Tanh" or Activation_Function == "Rational"):
-            for i in range(self.Num_Layers):
-                torch.nn.init.xavier_uniform_(  self.Layers[i].weight);
-                torch.nn.init.zeros_(           self.Layers[i].bias);
+    def _Get_Activation_String(self, Activation : torch.nn.Module) -> str:
+        """
+        An internal function which converts an activation function into a
+        corresponding string. This function is the inverse of 
+        _Get_Activation_Function.
+
+        -----------------------------------------------------------------------
+        Arguments:
+
+        Activation: An instance of an activation function class.
+        
+        -----------------------------------------------------------------------
+        Returns:
+
+        A string describing the type of activation function. For example, if 
+        Activation is a Tanh object, then the returned string is "Tanh".
+        """
+
+        if(  isinstance(Activation, torch.nn.Identity)):
+            return "None";
+        elif(isinstance(Activation, torch.nn.Tanh)):
+            return "Tanh";
+        elif(isinstance(Activation, torch.nn.Sigmoid)):
+            return "Sigmoid";
+        elif(isinstance(Activation, torch.nn.ELU)):
+            return "Elu";
+        elif(isinstance(Activation, torch.nn.Softmax)):
+            return "Softmax";
+        elif(isinstance(Activation, Rational)):
+            return "Rational";
+        else:
+            print("Unknown Activation Function. Got %s" % str(type(Activation)));
+            exit();
 
 
+
+    def Get_State(self) -> Dict:
+        """
+        This function returns a dictionary that houses everything you'd need 
+        to recreate this object from scratch. The returned dictionary is 
+        essentially a "super" state dictionary that goes far beyond what's 
+        contained in a regular state dictionary. This dictionary can be 
+        passed to the Get_State method of another object to create an identical 
+        copy of self. 
+
+        -----------------------------------------------------------------------
+        Returns:
+
+        A dictionary which can be used to recreate self from scratch.
+        """
+
+        # Initialize the State dictionary with the Widths attribute.
+        State : Dict =  {   "Widths"    : self.Widths };
+
+        # Make a list whose ith entry holds the ith layer's state dict. Then 
+        # add this list to State.
+        Layer_State_Dicts : List[Dict] = [];
+        for i in range(self.Num_Layers):
+            Layer_State_Dicts.append(self.Layers[i].state_dict());
+
+        State["Layers"] = Layer_State_Dicts;
+
+        # Make two lists whose ith entries hold the activation string and 
+        # activation state for the ith hidden activation function, respectively. 
+        # Note that if the ith activation function has no internal state, 
+        # which is the case for all activation functions other than Rational,
+        # then its state dict is empty. Thankfully, passing an empty state 
+        # dict to the load_state_dict method of such an object does nothing,
+        # so we do not need to handle activation functions with an internal
+        # state differently from those without one.
+        Activation_Types    : List[str]     = [];
+        Activation_States   : List[dict]    = [];
+        for i in range(len(self.Num_Layers)):
+            Activation_Types.append(self._Get_Activation_String(self.Activation_Functions[i]));
+            Activation_States.append(self.Activation_Functions[i].state_dict());
+        
+        State["Activation Types"]    = Activation_Types;
+        State["Activation States"]   = Activation_States;
+
+        # All done!
+        return State;
+
+
+
+    def Set_State(self, State : Dict) -> None:
+        """
+        This function sets self's state according to the State argument. State
+        should be a state dictionary returned by the "Get_State" method (or 
+        an un-pickled version of one). We assume that the passed State is 
+        compatible with self in the sense that they use the same architecture 
+        (Widths and activation functions).
+        """
+
+        # Check for compatibility
+        assert(len(self.Widths) == len(State["Widths"]));
+        for i in range(len(self.Widths)):
+            assert(self.Widths[i] == State["Widths"][i]);
+        
+        for i in range(self.Num_Layers):
+            assert(self._Get_Activation_String(self.Activation_Functions[i]) == State["Activation Types"][i]);
+        
+        # Now update self's state!
+        for i in range(self.Num_Layers):
+            self.Layers[i].load_state_dict(State["Layers"][i]);
+        
+        for i in range(self.Num_Layers):
+            self.Activation_Functions[i].load_state_dict(State["Activation States"][i]);
+        
+        
 
     def forward(self, X : torch.Tensor) -> torch.Tensor:
         """ Forward method for the NN class. Note that the user should NOT call
@@ -158,7 +302,7 @@ class Network(torch.nn.Module):
         applied to the ith row of X. """
 
         # Pass X through the hidden layers. Each has an activation function.
-        for i in range(0, self.Num_Layers - 1):
+        for i in range(0, self.Num_Hidden_Layers):
             X = self.Activation_Functions[i](self.Layers[i](X));
 
         # Pass through the last layer (which has no activation function) and
