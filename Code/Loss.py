@@ -16,9 +16,8 @@ from    typing                  import Tuple, List, Dict;
 
 from    Derivative              import Derivative;
 from    Term                    import Term;
-from    Network                 import Network;
+from    Network                 import Network, Rational;
 from    Evaluate_Derivatives    import Derivative_From_Derivative;
-
 
 
 def Data_Loss(
@@ -295,38 +294,49 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
 
 
 
-def L0_Approx_Loss(Xi : torch.Tensor, s : float):
-    """ 
-    This function returns an approximation to the L0 norm of Xi. Notice that if 
-    x is a real number then,
-            lim_{s -> 0} 1 - exp(-x^2/s) = { 0    if x = 0
-                                           { 1    if x != 0
-    Thus, if we choose s to be small, then
-            N - ( exp(-Xi_1^2/s^2) + exp(-Xi_2^2/s^2) + ... + exp(-Xi_N^2/s^2) )
-    will approximate the L0 norm of x. This function evaluates the expression
-    above.
+def L2_Squared_Loss(U : Network) -> torch.Tensor:
+    """
+    This function computes the square of the L2 norm of U's parameter vector.
+    In particular, if W_1, ... , W_D and b_1, ... , b_D are the weight matrices
+    and bias vectors of U, respectively, then this function returns a single 
+    element tensor whose lone entry holds the value
+            ||W_1||_F^2 + ... + ||W_D||_F^2 + ||b_1||_2^2 + ... + ||b_D||_2^2
+    (where ||M||_F denotes the Frobenius norm of the matrix A; that is, the sum
+    of the squares of the elements of F). 
 
-    ----------------------------------------------------------------------------
+    Note: If U is a rational NN, we also include the square of the coefficients 
+    of each rational activation function.
+
+    ---------------------------------------------------------------------------
     Arguments:
 
-    Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
+    U: A neural network object.
 
-    s: The "s" in in the expression above
-
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     Returns:
 
-        N - ( exp(-Xi_1^2/s^2) + exp(-Xi_2^2/s^2) + ... + exp(-Xi_N^2/s^2) )
-    where N is the number of components of Xi. 
+    A single element tensor whose lone element holds the square of the L2 norm 
+    of U's parameter vector.
     """
 
-    # s must be positive for the following to work.
-    assert(s > 0);
+    # Cycle through U's layers, adding on the square of the parameters in the 
+    # ith layer in the ith loop iteration.
 
-    # Component-wise evaluate exp(-Xi^2/s)
-    Xi2_d_s2     = torch.div(torch.square(Xi), s*s);
-    Exp_Xi2_d_s2 = torch.exp(torch.mul(Xi2_d_s2, -1));
+    Loss : torch.Tensor = torch.zeros(1, dtype = torch.float32);
 
-    # Take the sum and subtract N from it.
-    N : int = Xi.numel();
-    return N - Exp_Xi2_d_s2.sum();
+    Num_Layers : int = U.Num_Layers;
+    for i in range(Num_Layers):
+        # Add on the contribution due to the weight matrix and bias vector.
+        W : torch.Tensor = U.Layers[i].weight;
+        b : torch.Tensor = U.Layers[i].bias;
+
+        Loss += torch.sum(torch.multiply(W, W));
+        Loss += torch.sum(torch.multiply(b, b));
+
+        # if this layer uses a rational NN, we need to add its coefficients.
+        AF : torch.nn.Module = U.Activation_Functions[i];
+        if(isinstance(AF, Rational)):
+            Loss += torch.sum(torch.multiply(AF.a, AF.a));
+            Loss += torch.sum(torch.multiply(AF.b, AF.b));
+    
+    return Loss;

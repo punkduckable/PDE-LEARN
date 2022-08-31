@@ -13,7 +13,7 @@ import  torch;
 from    typing     import List, Tuple, Dict, Callable;
 
 from    Network    import Network;
-from    Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
+from    Loss       import Data_Loss, Coll_Loss, Lp_Loss, L2_Squared_Loss;
 from    Derivative import Derivative;
 from    Term       import Term;
 
@@ -101,11 +101,12 @@ def Training(   U               : Network,
     # because we find these variables in the Closure function (which has its own
     # scope. Thus, any variables created in Closure are inaccessible from
     # outside Closure).
-    Residual_Buffer     = torch.empty(Coll_Points.shape[0], dtype = torch.float32);
-    Coll_Loss_Buffer    = torch.empty(1, dtype = torch.float32);
-    Data_Loss_Buffer    = torch.empty(1, dtype = torch.float32);
-    Lp_Loss_Buffer      = torch.empty(1, dtype = torch.float32);
-    Total_Loss_Buffer   = torch.empty(1, dtype = torch.float32);
+    Residual_Buffer         = torch.empty(Coll_Points.shape[0], dtype = torch.float32);
+    Coll_Loss_Buffer        =    torch.empty(1, dtype = torch.float32);
+    Data_Loss_Buffer        = torch.empty(1, dtype = torch.float32);
+    Lp_Loss_Buffer          = torch.empty(1, dtype = torch.float32);
+    L2_Loss_Buffer  = torch.empty(1, dtype = torch.float32);
+    Total_Loss_Buffer       = torch.empty(1, dtype = torch.float32);
 
     # Define closure function (needed for LBFGS)
     def Closure() -> torch.Tensor:
@@ -123,21 +124,27 @@ def Training(   U               : Network,
                                         RHS_Terms   = RHS_Terms,
                                         Device      = Device);
 
-        Data_Loss_Value  = Data_Loss(   U                   = U,
+        Data_Loss_Value = Data_Loss(    U                   = U,
                                         Inputs              = Inputs,
                                         Targets             = Targets);
 
-        Lp_Loss_Value    = Lp_Loss(     Xi      = Xi,
+        Lp_Loss_Value = Lp_Loss(        Xi      = Xi,
                                         p       = p);
 
-        Total_Loss       = Weights["Data"]*Data_Loss_Value + Weights["Coll"]*Coll_Loss_Value + Weights["Lp"]*Lp_Loss_Value;
+        L2_Loss_Value = L2_Squared_Loss(U = U);
+
+        Total_Loss       = (Weights["Data"]*Data_Loss_Value + 
+                            Weights["Coll"]*Coll_Loss_Value + 
+                            Weights["Lp"]*Lp_Loss_Value + 
+                            Weights["L2"]*L2_Loss_Value);
 
         # Store their values in the buffers.
-        Residual_Buffer[:]   = Residual;
-        Coll_Loss_Buffer[:]  = Coll_Loss_Value;
-        Data_Loss_Buffer[:]  = Data_Loss_Value;
-        Lp_Loss_Buffer[:]    = Lp_Loss_Value;
-        Total_Loss_Buffer[:] = Total_Loss;
+        Residual_Buffer[:]      = Residual;
+        Coll_Loss_Buffer[:]     = Coll_Loss_Value;
+        Data_Loss_Buffer[:]     = Data_Loss_Value;
+        Lp_Loss_Buffer[:]       = Lp_Loss_Value;
+        L2_Loss_Buffer[:]       = L2_Loss_Value;
+        Total_Loss_Buffer[:]    = Total_Loss;
 
         # Back-propagate to compute gradients of Total_Loss with respect to
         # network parameters (only do if this if the loss requires grad)
@@ -154,6 +161,7 @@ def Training(   U               : Network,
             "Coll Loss"     : Coll_Loss_Buffer.item(),
             "Data Loss"     : Data_Loss_Buffer.item(),
             "Lp Loss"       : Lp_Loss_Buffer.item(),
+            "L2 Loss"       : L2_Loss_Buffer.item(),
             "Total Loss"    : Total_Loss_Buffer.item()};
 
 
@@ -230,12 +238,12 @@ def Testing(    U               : Network,
     U.eval();
 
     # Get the losses
-    Data_Loss_Value : float  = Data_Loss(
+    Data_Loss_Value : torch.Tensor  = Data_Loss(
             U           = U,
             Inputs      = Inputs,
             Targets     = Targets);
 
-    Coll_Loss_Value : float = Coll_Loss(U           = U,
+    Coll_Loss_Value : torch.Tensor = Coll_Loss(U           = U,
                                         Xi          = Xi,
                                         Coll_Points = Coll_Points,
                                         Derivatives = Derivatives,
@@ -243,13 +251,21 @@ def Testing(    U               : Network,
                                         RHS_Terms   = RHS_Terms,
                                         Device      = Device)[0];
 
-    Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
+    Lp_Loss_Value : torch.Tensor = Lp_Loss(    
+                                        Xi    = Xi,
                                         p     = p);
 
-    Total_Loss : float = Weights["Data"]*Data_Loss_Value + Weights["Coll"]*Coll_Loss_Value + Weights["Lp"]*Lp_Loss_Value;
+    L2_Loss_Value : torch.Tensor = L2_Squared_Loss(    
+                                        U = U);
+
+    Total_Loss : torch.Tensor = (   Weights["Data"]*Data_Loss_Value + 
+                                    Weights["Coll"]*Coll_Loss_Value + 
+                                    Weights["Lp"]*Lp_Loss_Value + 
+                                    Weights["L2"]*L2_Loss_Value);
 
     # Return the losses.
     return {"Data Loss"     : Data_Loss_Value.item(),
             "Coll Loss"     : Coll_Loss_Value.item(),
             "Lp Loss"       : Lp_Loss_Value.item(),
+            "L2 Loss"       : L2_Loss_Value.item(),
             "Total Loss"    : Total_Loss.item()};

@@ -5,7 +5,7 @@
 Load U from Save [bool]:                         True
 Load Xi, Library from Save [bool]:               True
 Load Optimizer from Save [bool]:                 True
-    Load File Name [str]:                        Burgers_Sine_N100_P5000_Rational_Adam
+    Load File Name [str]:                        KdV_Sine_N0_P250_Rational_Adam
 
 
 
@@ -35,7 +35,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0002}
+Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0003, "L2" : 0.0001}
 
 Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
@@ -47,11 +47,11 @@ Number of Testing Collocation Points [int]:      1000
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          500
+Number of Epochs [int]:                          1000
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet [str]:                                    Burgers_Sine_N100_P5000
+DataSet [str]:                                    KdV_Sine_N0_P250

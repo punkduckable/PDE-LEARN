@@ -222,11 +222,13 @@ def main():
     Train_Losses    : Dict[str, numpy.ndarray]  = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
 
     Test_Losses    : Dict[str, numpy.ndarray]   = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
 
     # Epochs!!!
@@ -263,6 +265,7 @@ def main():
         Train_Losses["Data Losses"][t]  = Train_Dict["Data Loss"];
         Train_Losses["Coll Losses"][t]  = Train_Dict["Coll Loss"];
         Train_Losses["Lp Losses"][t]    = Train_Dict["Lp Loss"];
+        Train_Losses["L2 Losses"][t]    = Train_Dict["L2 Loss"];
         Train_Losses["Total Losses"][t] = Train_Dict["Total Loss"];
 
 
@@ -292,6 +295,7 @@ def main():
         Test_Losses["Data Losses"][t]   = Test_Dict["Data Loss"];
         Test_Losses["Coll Losses"][t]   = Test_Dict["Coll Loss"];
         Test_Losses["Lp Losses"][t]     = Test_Dict["Lp Loss"];
+        Test_Losses["L2 Losses"][t]     = Test_Dict["L2 Loss"];
         Test_Losses["Total Losses"][t]  = Test_Dict["Total Loss"];
 
 
@@ -327,10 +331,10 @@ def main():
             # be different. This is because the Training loss is evaluated
             # before back-prop, while the Testing loss is evaluated after it (and
             # Xi has been updated).
-            print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
-                % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Lp Loss"], Train_Dict["Total Loss"]));
-            print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f \t Total = %.7f"
-                % (t, Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Lp Loss"], Test_Dict["Total Loss"]));
+            print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f\t L2 = %.7f, \t Total = %.7f"
+                % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Lp Loss"], Train_Dict["L2 Loss"], Train_Dict["Total Loss"]));
+            print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f\t L2 = %.7f, \t Total = %.7f"
+                % (t, Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Lp Loss"], Test_Dict["L2 Loss"], Test_Dict["Total Loss"]));
         else:
             print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
