@@ -9,10 +9,10 @@ Classes_Path    = os.path.join(Code_Path, "Classes");
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Classes_Path);
 
-from typing import Tuple, List;
-import torch;
+from    typing      import Tuple, List;
+import  torch;
 
-from Derivative import Derivative;
+from    Derivative  import Derivative;
 
 
 

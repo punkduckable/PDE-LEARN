@@ -12,12 +12,12 @@ sys.path.append(Classes_Path);
 import  numpy;
 import  torch;
 import  math;
-from    typing import Tuple, List, Dict;
+from    typing                  import Tuple, List, Dict;
 
-from Derivative             import Derivative;
-from Term                   import Term;
-from Network                import Network;
-from Evaluate_Derivatives   import Derivative_From_Derivative;
+from    Derivative              import Derivative;
+from    Term                    import Term;
+from    Network                 import Network;
+from    Evaluate_Derivatives    import Derivative_From_Derivative;
 
 
 

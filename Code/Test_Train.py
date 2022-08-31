@@ -9,14 +9,13 @@ Classes_Path    = os.path.join(Code_Path, "Classes");
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Classes_Path);
 
-import  numpy as np;
 import  torch;
 from    typing     import List, Tuple, Dict, Callable;
 
-from Network    import Network;
-from Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
-from Derivative import Derivative;
-from Term       import Term;
+from    Network    import Network;
+from    Loss       import Data_Loss, Coll_Loss, Lp_Loss, L0_Approx_Loss;
+from    Derivative import Derivative;
+from    Term       import Term;
 
 
 def Training(   U               : Network,

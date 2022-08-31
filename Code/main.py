@@ -18,7 +18,7 @@ from    typing import List, Dict, Callable;
 
 from Settings_Reader    import Settings_Reader;
 from Library_Reader     import Read_Library;
-from Data_Loader        import Data_Loader;
+from Data               import Data_Loader;
 from Derivative         import Derivative;
 from Term               import Term, Build_Term_From_State;
 from Network            import Rational, Network;
@@ -169,7 +169,7 @@ def main():
         print("Build Xi, Library using settings in Settings.txt");
     
     # Report!
-    print("    LHS Term:               %s" % str(Settings["LHS Term"]))
+    print("    LHS Term:              %s" % str(Settings["LHS Term"]))
     print("    RHS Terms (%3u total): " % Num_RHS_Terms, end = '');
 
     for i in range(Num_RHS_Terms):
