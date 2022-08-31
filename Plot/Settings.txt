@@ -1,21 +1,10 @@
 ################################################################################
 # 1 Spatial Dimension Plot Settings.
 
-# Where are the state_dict's for the networks we want to plot? (The plot we
+# Where is the save file the network, library we want to plot? (The plot we
 # generate will have the same name)
-Load File Name [str]:                            Allen_Cahn_N75_P5000_Rat_Adam
-
-# What is the architecture of the solution network? (this must match the
-# architecture of the saved network or pytorch will throw an error)
-Number of Hidden Layers [int]:                   5
-Hidden Units per Hidden Layer [int]:             50
-Activation Function [Tanh, Rational, Sin]:       Rat
-
-# Where is the Library of terms? This must be the same library we used to
-# train the network. This should be a file in the main directory (omit the
-# .txt extension)
-Library File [str]:                              Library
+Load File Name [str]:                            Burgers_Sine_N100_P5000_Rational_Adam_2
 
 # What is the MATLAB dataset? (this should be a .mat file. Do not include the
 # .mat extension).
-Mat File Name [str]:                             Allen_Cahn
+Mat File Name [str]:                             Burgers_Sine

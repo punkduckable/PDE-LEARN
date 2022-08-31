@@ -3,7 +3,7 @@ import os
 import sys
 
 # Get path to parent directory
-Main_Path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
+Main_Path       = os.path.dirname(os.path.abspath(os.path.curdir));
 
 # Get the path to the Code, Classes directories.
 Code_Path       = os.path.join(Main_Path, "Code");
@@ -14,11 +14,12 @@ sys.path.append(Code_Path);
 sys.path.append(Classes_Path);
 
 # Code files.
-from Network                import Neural_Network;
+from Network                import Network;
 from Derivative             import Derivative;
-from Term                   import Term;
-from Plot_Settings_Reader   import Settings_Reader, Settings_Container;
+from Term                   import Term, Build_Term_From_State;
+from Plot_Settings_Reader   import Settings_Reader;
 from Loss                   import Coll_Loss;
+from typing                 import Dict, List;
 
 import  torch;
 import  numpy;
@@ -28,14 +29,8 @@ import  matplotlib.pyplot as pyplot;
 
 
 
-def Plot_U( Num_Hidden_Layers       : int,
-            Units_Per_Layer         : int,
-            Activation_Function     : str,
+def Plot_U( Load_File_Name          : str,
             Device                  : torch.device,
-            Load_File_Name          : str,
-            Derivatives             : Derivative,
-            LHS_Term                : Term,
-            RHS_Terms               : List[Term],
             t_Coords_Matrix         : numpy.ndarray,
             x_Coords_Matrix         : numpy.ndarray,
             Inputs                  : numpy.ndarray,
@@ -46,34 +41,14 @@ def Plot_U( Num_Hidden_Layers       : int,
     spatial dimension.
 
     ----------------------------------------------------------------------------
-    Argumnets:
+    Arguments:
 
-    Num_Hidden_Layers: The number of hidden layers in the network.
-
-    Units_Per_Layer: The number of hidden units per hidden layer in the network.
-
-    Activation_Function: The activation function of the network.
+    Load_File_Name: The Save file that contains the network parameters + Xi.
 
     Device: The device we want to load the network on.
 
-    Load_File_Name: The Save file that contains the network paramaters + Xi.
-
-    Derivatives: We try to learn a PDE of the form
-            T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
-    where each T_k is a "Term" of the form
-            T_k(U) = (D_1 U)^{p(1)} ... (D_m U)^{p(m)}
-    where each D_j is a derivative operator and p(j) >= 1. Derivatives is a list
-    that contains each D_j's in each term in the equation above. This list
-    should be ordered according to the Derivatives' orders (see Derivative
-    class).
-
-    LHS_Term : A Term object representing T_0 in the equation above.
-
-    RHS_Terms : A list of Term objects whose ith entry represents T_i in the
-    equation above.
-
     t_Coords_Matrix, x_coords_matrix: We evaluate U, the error, and the PDE
-    Residual on a grid of coordinates. These arguments are matricies whose i,j
+    Residual on a grid of coordinates. These arguments are matrices whose i,j
     entry holds the value of the x, t coordinate at the (i,j)th coordinate,
     respectively.
 
@@ -95,27 +70,45 @@ def Plot_U( Num_Hidden_Layers       : int,
     ############################################################################
     # Setup.
 
-    # First, initialize U.
-    U = Neural_Network(
-            Num_Hidden_Layers   = Num_Hidden_Layers,
-            Neurons_Per_Layer   = Units_Per_Layer,
-            Input_Dim           = 2,
-            Output_Dim          = 1,
-            Activation_Function = Activation_Function,
-            Device              = Device);
+    # First, load the file. 
+    Load_File_Path  : str   = "../Saves/" + Load_File_Name;
+    Saved_State     : Dict  = torch.load(Load_File_Path, map_location = Device);
 
-    # Next, intiailize Xi.
-    Xi = torch.zeros(   len(RHS_Terms),
-                        dtype           = torch.float32,
-                        device          = Device,
-                        requires_grad   = True);
+    # Now, set up U.
+    U_State             : Dict      = Saved_State["U State"];
+    Widths              : List[int] = U_State["Widths"];
+    Hidden_Activation   : str       = U_State["Activation Types"][0];
+    Output_Activation   : str       = U_State["Activation Types"][-1];
 
-    # Next, Load U, Xi.
-    Load_File_Path : str = "../Saves/" + Load_File_Name;
-    Saved_State = torch.load(Load_File_Path, map_location = Device);
+    # Initialize U.
+    U = Network(    Widths              = Widths, 
+                    Hidden_Activation   = Hidden_Activation, 
+                    Output_Activation   = Output_Activation,
+                    Device              = Device);
 
-    U.load_state_dict(Saved_State["U"]);
-    Xi = Saved_State["Xi"];
+    # Finally, load U's state.
+    U.Set_State(Saved_State["U State"]);
+
+    # Next, load Xi.
+    Xi : torch.Tensor = Saved_State["Xi"];
+
+    # Next, load the derivatives
+    Derivatives     : List[Derivative]  = [];
+    Num_Derivatives : int               = len(Saved_State["Derivative Encodings"]);
+    for i in range(Num_Derivatives):
+        Derivatives.append(Derivative(Encoding = Saved_State["Derivative Encodings"][i]));
+        
+    # Finally, load the library (LHS term and RHS Terms)
+    LHS_Term        : Term          = Build_Term_From_State(State = Saved_State["LHS Term State"]);
+    RHS_Terms       : List[Term]    = [];
+
+    Num_RHS_Terms   : int           = len(Saved_State["RHS Term States"]);
+    for i in range(Num_RHS_Terms):
+        RHS_Terms.append(Build_Term_From_State(State = Saved_State["RHS Term States"][i]));
+
+
+    ############################################################################
+    # Evaluate U, PDE residual on inputs.
 
     # Map Inputs to a tensor.
     torch_Inputs : torch.Tensor = torch.from_numpy(Inputs);
@@ -242,14 +235,14 @@ def Plot_U( Num_Hidden_Layers       : int,
 
 
 if __name__ == "__main__":
-    # Get Settings.
-    Settings : Settings_Container = Settings_Reader();
+    Settings : Dict = Settings_Reader();
+
 
     ############################################################################
     # Set up the data.
 
     # Load data file.
-    Data_File_Path : str    = "../MATLAB/Data/" + Settings.Mat_File_Name + ".mat";
+    Data_File_Path : str    = "../MATLAB/Data/" + Settings["Mat File Name"] + ".mat";
     File                    = scipy.io.loadmat(Data_File_Path);
 
     # Fetch spatial, temporal coordinates and the true solution. We cast these
@@ -270,7 +263,7 @@ if __name__ == "__main__":
     t_Coords_Matrix, x_Coords_Matrix = numpy.meshgrid(t_Points, x_Points);
 
     # Now, stitch successive the rows of the coordinate matrices together
-    # to make a 1D array. We interpert the result as a 1 column matrix.
+    # to make a 1D array. We interpret the result as a 1 column matrix.
     t_Coords_1D : numpy.ndarray = t_Coords_Matrix.flatten().reshape(-1, 1);
     x_Coords_1D : numpy.ndarray = x_Coords_Matrix.flatten().reshape(-1, 1);
 
@@ -281,14 +274,8 @@ if __name__ == "__main__":
     ############################################################################
     # Plot!
 
-    Plot_U( Num_Hidden_Layers       = Settings.Num_Hidden_Layers,
-            Units_Per_Layer         = Settings.Units_Per_Layer,
-            Activation_Function     = Settings.Activation_Function,
+    Plot_U( Load_File_Name          = Settings["Load File Name"],
             Device                  = torch.device('cpu'),
-            Load_File_Name          = Settings.Load_File_Name,
-            Derivatives             = Settings.Derivatives,
-            LHS_Term                = Settings.LHS_Term,
-            RHS_Terms               = Settings.RHS_Terms,
             t_Coords_Matrix         = t_Coords_Matrix,
             x_Coords_Matrix         = x_Coords_Matrix,
             Inputs                  = Inputs,

@@ -147,7 +147,7 @@ def main():
         
         Settings["RHS Terms"] = RHS_Terms;
 
-        print("Loaded Xi, Library from file.")
+        print("Loaded Xi, Library from file.");
 
     else:
         # First, read the library.

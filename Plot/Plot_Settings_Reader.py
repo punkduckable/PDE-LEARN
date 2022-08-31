@@ -2,36 +2,25 @@
 import os
 import sys
 
-
 # Get path to Reader directory.
-Main_Path       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)));
-Code_Path       = os.path.join(Main_Path, "Code");
-Readers_Path    = os.path.join(Code_Path, "Readers");
+Main_Path       : str = os.path.dirname(os.path.abspath(os.path.curdir));
+Code_Path       : str = os.path.join(Main_Path, "Code");
+Readers_Path    : str = os.path.join(Code_Path, "Readers");
 
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Readers_Path);
 
-import torch;
+import  torch;
+from    typing          import Dict, List;
 
-from File_Reader    import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
-from Library_Reader import Read_Library;
-
-
-
-################################################################################
-# Classes
-
-class Settings_Container:
-    # A container for data read in from the settings file.
-    pass;
+from    File_Reader     import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
+from    Library_Reader  import Read_Library;
 
 
 
-################################################################################
-# Functions
-
-def Settings_Reader() -> Settings_Container:
-    """ This function reads the settings in Settings.txt.
+def Settings_Reader() -> Dict:
+    """ 
+    This function reads the settings in Settings.txt.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -41,57 +30,19 @@ def Settings_Reader() -> Settings_Container:
     ----------------------------------------------------------------------------
     Returns:
 
-    A Settings_Container object that contains all the settings we read from
-    Settings.txt. The main function uses these to set up the program. """
+    A Dictionary housing the settings we read from Settings.txt. The main 
+    function uses these to set up the program. 
+    """
 
-    # Open file, initialze a Settings object.
+    # Open file, initialize a Settings object.
     File        = open("Settings.txt", "r");
-    Settings    = Settings_Container();
+    Settings    = {};
 
     # Where is the saved state?
-    Settings.Load_File_Name     = Read_Setting(File, "Load File Name [str]:");
-
-    # Number of hidden layers in U network.
-    Settings.Num_Hidden_Layers  = int(Read_Setting(File, "Number of Hidden Layers [int]:"));
-
-
-    ############################################################################
-    # Network settings.
-
-    # Number of hidden units per hidden layer in the U network.
-    Settings.Units_Per_Layer    = int(Read_Setting(File, "Hidden Units per Hidden Layer [int]:"));
-
-    # Which activation function should we use?
-    Buffer = Read_Setting(File, "Activation Function [Tanh, Rational, Sin]:");
-    if  (Buffer[0] == 'R' or Buffer[0] == 'r'):
-        Settings.Activation_Function = "Rational";
-    elif(Buffer[0] == 'T' or Buffer[0] == 't'):
-        Settings.Activation_Function = "Tanh";
-    elif(Buffer[0] == 'S' or Buffer[0] == 's'):
-        Settings.Activation_Function = "Sin";
-    else:
-        raise Read_Error("\"Activation Function [Tanh, Rational, Sin]:\" should be" + \
-                         "\"Tanh\", \"Rational\", or \"Sin\" Got " + Buffer);
-
-
-    ############################################################################
-    # Library Settings.
-
-    # Where is the file that lists the library functions / derivatives?
-    Library_File_Name : str             = Read_Setting(File, "Library File [str]:");
-    Library_Path      : str             = "../" + Library_File_Name + ".txt";
-    Derivatives, LHS_Term, RHS_Terms    = Read_Library(Library_Path);
-
-    Settings.Derivatives    = Derivatives;
-    Settings.LHS_Term       = LHS_Term;
-    Settings.RHS_Terms      = RHS_Terms;
-
-
-    ############################################################################
-    # DataSet settings.
+    Settings["Load File Name"]  = Read_Setting(File, "Load File Name [str]:");
 
     # Data file name. Note that the data file should NOT contain noise.
-    Settings.Mat_File_Name =  Read_Setting(File, "Mat File Name [str]:");
+    Settings["Mat File Name"]   = Read_Setting(File, "Mat File Name [str]:");
 
     # All done! Return the settings!
     File.close();
