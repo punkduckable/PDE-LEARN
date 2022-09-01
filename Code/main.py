@@ -14,17 +14,17 @@ sys.path.append(Classes_Path);
 import  numpy;
 import  torch;
 import  time;
-from    typing import List, Dict, Callable;
+from    typing import List, Dict;
 
 from Settings_Reader    import Settings_Reader;
 from Library_Reader     import Read_Library;
 from Data               import Data_Loader;
 from Derivative         import Derivative;
 from Term               import Term, Build_Term_From_State;
-from Network            import Rational, Network;
+from Network            import Network;
 from Test_Train         import Testing, Training;
-from Loss               import Data_Loss, Lp_Loss, Coll_Loss;
 from Points             import Generate_Points;
+from Plot               import Plot_Losses;
 
 
 
@@ -221,15 +221,14 @@ def main():
     Epoch_Timer     : float                     = time.perf_counter();
     Train_Losses    : Dict[str, numpy.ndarray]  = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
 
     Test_Losses    : Dict[str, numpy.ndarray]   = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
                                                    "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
+
+    Parameter_Losses : Dict[str, numpy.ndarray] = {"Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
 
     # Epochs!!!
     print("\nRunning %d epochs..." % Settings["Num Epochs"]);
@@ -264,8 +263,6 @@ def main():
         # Update the loss history buffers.
         Train_Losses["Data Losses"][t]  = Train_Dict["Data Loss"];
         Train_Losses["Coll Losses"][t]  = Train_Dict["Coll Loss"];
-        Train_Losses["Lp Losses"][t]    = Train_Dict["Lp Loss"];
-        Train_Losses["L2 Losses"][t]    = Train_Dict["L2 Loss"];
         Train_Losses["Total Losses"][t] = Train_Dict["Total Loss"];
 
 
@@ -294,9 +291,11 @@ def main():
 
         Test_Losses["Data Losses"][t]   = Test_Dict["Data Loss"];
         Test_Losses["Coll Losses"][t]   = Test_Dict["Coll Loss"];
-        Test_Losses["Lp Losses"][t]     = Test_Dict["Lp Loss"];
-        Test_Losses["L2 Losses"][t]     = Test_Dict["L2 Loss"];
         Test_Losses["Total Losses"][t]  = Test_Dict["Total Loss"];
+
+        # Now record the parameter losses.
+        Parameter_Losses["Lp Losses"][t]    = Test_Dict["Lp Loss"];
+        Parameter_Losses["L2 Losses"][t]    = Test_Dict["L2 Loss"];
 
 
         ########################################################################
@@ -327,14 +326,9 @@ def main():
         # Report!
 
         if(t % 10 == 0 or t == Settings["Num Epochs"] - 1):
-            # Note: When we print this, the testing/training Lp losses tend to
-            # be different. This is because the Training loss is evaluated
-            # before back-prop, while the Testing loss is evaluated after it (and
-            # Xi has been updated).
-            print("            | Train:\t Data = %.7f\t Coll = %.7f\t Lp = %.7f\t L2 = %.7f, \t Total = %.7f"
-                % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Lp Loss"], Train_Dict["L2 Loss"], Train_Dict["Total Loss"]));
-            print("Epoch #%-4d | Test: \t Data = %.7f\t Coll = %.7f\t Lp = %.7f\t L2 = %.7f, \t Total = %.7f"
-                % (t, Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Lp Loss"], Test_Dict["L2 Loss"], Test_Dict["Total Loss"]));
+            print("            | Train:\t Data = %.7f\t Coll = %.7f\t Total = %.7f" % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Total Loss"]));
+            print("            | Test: \t Data = %.7f\t Coll = %.7f\t Total = %.7f" % (Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Total Loss"]));
+            print("Epoch #%-4d |       \t Lp   = %.7f\t L2   = %.7f" % (t, Test_Dict["Lp Loss"], Test_Dict["L2 Loss"]))
         else:
             print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
 
@@ -435,6 +429,18 @@ def main():
                 "../Saves/" + Save_File_Name);
 
     print("Done! Saved as \"%s\"" % Save_File_Name);
+
+
+    ############################################################################
+    # Plot. 
+
+    Plot_Losses(Save_File_Name      = Save_File_Name,
+                Train_Losses        = [Train_Losses],
+                Test_Losses         = [Test_Losses],
+                Parameter_Losses    = [Parameter_Losses],
+                Labels              = [Save_File_Name]);
+                
+
 
 
 if(__name__ == "__main__"):
