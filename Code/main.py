@@ -3,7 +3,7 @@ import os
 import sys
 
 # Get path to Code, Readers, Classes directories.
-Code_Path       : str = os.path.dirname(os.path.abspath(__file__));
+Code_Path       : str = os.path.abspath(os.path.curdir);
 Readers_Path    : str = os.path.join(Code_Path, "Readers");
 Classes_Path    : str = os.path.join(Code_Path, "Classes");
 
@@ -32,20 +32,7 @@ def main():
     # Load the settings, print them.
     Settings : Dict = Settings_Reader();
     for (Setting, Value) in Settings.items():
-        print("%-25s = " % Setting, end = '');
-
-        # Check if Value is a List. If so, print its contents one at a time.
-        if(isinstance(Value, list)):
-            for i in range(len(Value)):
-                print(Value[i], end = '');
-                if(i != len(Value) - 1):
-                    print(", ", end = '');
-                else:
-                    print();
-
-        # Otherwise, print the value.
-        else:
-            print(str(Value));
+        print("%-25s = %s" % (Setting, str(Value)), end = '');
 
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
@@ -59,15 +46,33 @@ def main():
     # Input_Bounds for each coordinate component. Since one coordinate is for
     # time, one minus the number of rows gives the number of spatial dimensions).
 
-    Data_Dict : Dict = Data_Loader( DataSet_Name    = Settings["DataSet Name"],
-                                    Device          = Settings["Device"]);
+    Num_DataSets    : int                       = len(Settings["DataSet Names"]);
+    Data_Dict       : Dict[str, numpy.ndarray]  = { "Train Inputs"          : [],
+                                                    "Train Targets"         : [],
+                                                    "Test Inputs"           : [],
+                                                    "Test Targets"          : [],
+                                                    "Input Bounds"          : [],
+                                                    "Number of Dimensions"  : []};
+    for i in range(Num_DataSets):
+        ith_Data_Dict : Dict = Data_Loader( DataSet_Name    = Settings["DataSet Names"][i],
+                                            Device          = Settings["Device"]);
+        
+        Data_Dict["Train Inputs"            ].append(ith_Data_Dict["Train Inputs"]);
+        Data_Dict["Train Targets"           ].append(ith_Data_Dict["Train Targets"]);
+        Data_Dict["Test Inputs"             ].append(ith_Data_Dict["Test Inputs"]);
+        Data_Dict["Test Targets"            ].append(ith_Data_Dict["Test Targets"]);
+        Data_Dict["Input Bounds"            ].append(ith_Data_Dict["Input Bounds"]);
+        Data_Dict["Number of Dimensions"    ].append(ith_Data_Dict["Input Bounds"].shape[0]);
 
-    # Get the number of input dimensions.
-    Settings["Num Spatial Dimensions"] : int        = Data_Dict["Number Spatial Dimensions"]
+    # Now determine the number of dimensions of the data. This should be the 
+    # same for each data set.
+    Num_Dimensions : int   = Data_Dict["Number of Dimensions"][0];
+    for i in range(1, Num_DataSets):
+        assert(Data_Dict["Number of Dimensions"][i] == Num_Dimensions);
 
 
     ############################################################################
-    # Set up U, Xi, Library
+    # Set up U for each data set, as well as the common Xi, Library
 
     # First, if we are loading anything, load in the save.
     if( Settings["Load U"]              == True or 
@@ -81,47 +86,45 @@ def main():
 
     # First, either build U or load its state from save. 
     if(Settings["Load U"] == True):
-        # First, fetch Widths and Activation functions from U's State.
-        U_State             : Dict      = Saved_State["U State"];
-        Widths              : List[int] = U_State["Widths"];
-        Hidden_Activation   : str       = U_State["Activation Types"][0];
-        Output_Activation   : str       = U_State["Activation Types"][-1];
+        # Fetch each solution's state. There should be one state for each data set.
+        U_States : List[Dict] = Saved_State["U States"];
+        assert(len(U_States) == Num_DataSets);
 
-        Settings["Hidden Activation Function"]  = Hidden_Activation;
+        U : List[Network] = [];
+        for i in range(Num_DataSets):
+            # First, fetch Widths and Activation functions from U[i]'s State.
+            Ui_State            : Dict      = U_States[i];
+            Widths              : List[int] = Ui_State["Widths"];
+            Hidden_Activation   : str       = Ui_State["Activation Types"][0];
+            Output_Activation   : str       = Ui_State["Activation Types"][-1];
 
-        # Initialize U.
-        U = Network(    Widths              = Widths, 
-                        Hidden_Activation   = Hidden_Activation, 
-                        Output_Activation   = Output_Activation,
-                        Device              = Settings["Device"]);
-    
-        # Finally, load U's state.
-        U.Set_State(Saved_State["U State"]);
+            Settings["Hidden Activation Function"]  = Hidden_Activation;
 
-        print("Loaded U from state.  ");
+            # Set up U[i].
+            U.append(Network(    Widths              = Widths, 
+                            Hidden_Activation   = Hidden_Activation, 
+                            Output_Activation   = Output_Activation,
+                            Device              = Settings["Device"]));
+            U[i].Set_State(Ui_State);
+
+            # Report!
+            print("Loaded U[%u] from state." % i);
+            print("    Hidden Activation:   %s" % Hidden_Activation);
+            print("    Widths:              %s" % str(Widths), end = '');
 
     else:
         # First, set up Widths. This is an array whose ith entry specifies the width of 
         # the ith layer of the network (including the input and output layers).
-        Widths = [Settings["Num Spatial Dimensions"] + 1] + Settings["Hidden Layer Widths"] + [1];
+        Widths = [Num_Dimensions] + Settings["Hidden Layer Widths"] + [1];
         
-        # Now initialize U.
-        U = Network(    Widths              = Widths,
-                        Hidden_Activation   = Settings["Hidden Activation Function"],
-                        Device              = Settings["Device"]);
+        # Now initialize each U[i].
+        U : List[Network] = [];
+        for i in range(Num_DataSets):
+            U.append(Network(   Widths              = Widths,
+                                Hidden_Activation   = Settings["Hidden Activation Function"],
+                                Device              = Settings["Device"]));
         
-        print("Set up U using settings in Settings.txt.")
-
-    # Report!
-    print("    Hidden Activation: %s" % Settings["Hidden Activation Function"]);
-    print("    Widths:            ", end = '');
-    for i in range(len(Widths)):
-        print(str(Widths[i]), end = '');
-
-        if(i != len(Widths) - 1):  
-            print(", ", end = '');
-        else:
-            print("\n");
+        print("Set up the solution networks using settings in Settings.txt.")
 
 
     # Second, either build Xi + the library or load it from save.
@@ -187,7 +190,9 @@ def main():
     # overwrites the original Xi (loading the optimizer later ensures the
     # optimizer optimizes the correct Xi tensor).
 
-    Params = list(U.parameters());
+    Params = [];
+    for i in range(Num_DataSets):
+        Params = Params + list(U[i].parameters());
     Params.append(Xi);
 
     if(  Settings["Optimizer"] == "Adam"):
@@ -197,7 +202,6 @@ def main():
     else:
         print(("Optimizer is %s when it should be \"Adam\" or \"LBFGS\"" % Settings["Optimizer"]));
         exit();
-
 
     if(Settings["Load Optimizer"]  == True ):
         # Now load the optimizer.
@@ -215,20 +219,27 @@ def main():
     # Run the Epochs!
 
     # Set up an array to hold the collocation points.
-    Targeted_Coll_Pts : torch.Tensor = torch.empty((0, Settings["Num Spatial Dimensions"] + 1), dtype = torch.float32);
+    Targeted_Coll_Pts : List[torch.Tensor]= [];
+    for i in range(Num_DataSets):
+        Targeted_Coll_Pts.append(torch.empty((0, Num_Dimensions), dtype = torch.float32));
 
     # Set up buffers to hold losses, also set up a timer.
-    Epoch_Timer     : float                     = time.perf_counter();
-    Train_Losses    : Dict[str, numpy.ndarray]  = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
+    Epoch_Timer         : float                             = time.perf_counter();
+    Train_Losses        : List[Dict[str, numpy.ndarray]]    = [];
+    Test_Losses         : List[Dict[str, numpy.ndarray]]    = [];
+    L2_Losses           : List[numpy.ndarray]               = [];
+    Lp_Losses           : numpy.ndarray                     = numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32);
 
-    Test_Losses    : Dict[str, numpy.ndarray]   = {"Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
+    for i in range(Num_DataSets):
+        Train_Losses.append({   "Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)});
 
-    Parameter_Losses : Dict[str, numpy.ndarray] = {"Lp Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
-                                                   "L2 Losses"      : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)};
+        Test_Losses.append({    "Data Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                "Coll Losses"    : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32),
+                                "Total Losses"   : numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32)});
+
+        L2_Losses.append(numpy.ndarray(shape = Settings["Num Epochs"], dtype = numpy.float32));
 
     # Epochs!!!
     print("\nRunning %d epochs..." % Settings["Num Epochs"]);
@@ -236,20 +247,23 @@ def main():
         ########################################################################
         # Train
 
-        # First, we need to set up the collocation points for this epoch. This
-        # set is a combination of randomly generated points and the targeted
-        # points from the last epoch.
-        Random_Coll_Points  : torch.Tensor = Generate_Points(
-                                                Bounds      = Data_Dict["Input Bounds"],
-                                                Num_Points  = Settings["Num Train Coll Points"],
-                                                Device      = Settings["Device"]);
+        # First, we need to set up the collocation points for each data set for
+        # this epoch. This set is a combination of randomly generated points 
+        # and the targeted points from the last epoch.
 
-        Coll_Points         : torch.Tensor = torch.vstack((Random_Coll_Points, Targeted_Coll_Pts));
+        Train_Coll_Points : List[numpy.ndarray] = [];
+        for i in range(Num_DataSets):
+            ith_Random_Coll_Points  : torch.Tensor = Generate_Points(
+                                                    Bounds      = Data_Dict["Input Bounds"][i],
+                                                    Num_Points  = Settings["Num Train Coll Points"],
+                                                    Device      = Settings["Device"]);
+
+            Train_Coll_Points.append(torch.vstack((ith_Random_Coll_Points, Targeted_Coll_Pts[i])));
 
         # Now run a Training Epoch.
         Train_Dict = Training(  U           = U,
                                 Xi          = Xi,
-                                Coll_Points = Coll_Points,
+                                Coll_Points = Train_Coll_Points,
                                 Inputs      = Data_Dict["Train Inputs"],
                                 Targets     = Data_Dict["Train Targets"],
                                 Derivatives = Settings["Derivatives"],
@@ -260,10 +274,11 @@ def main():
                                 Optimizer   = Optimizer,
                                 Device      = Settings["Device"]);
 
-        # Update the loss history buffers.
-        Train_Losses["Data Losses"][t]  = Train_Dict["Data Loss"];
-        Train_Losses["Coll Losses"][t]  = Train_Dict["Coll Loss"];
-        Train_Losses["Total Losses"][t] = Train_Dict["Total Loss"];
+        # Append the train loss history.
+        for i in range(Num_DataSets):
+            Train_Losses[i]["Data Losses"][t]  = Train_Dict["Data Losses"][i];
+            Train_Losses[i]["Coll Losses"][t]  = Train_Dict["Coll Losses"][i];
+            Train_Losses[i]["Total Losses"][t] = Train_Dict["Total Losses"][i];
 
 
         ########################################################################
@@ -271,10 +286,12 @@ def main():
 
         # First, generate random collocation points then evaluate the
         # network on them.
-        Test_Coll_Points = Generate_Points(
-                            Bounds      = Data_Dict["Input Bounds"],
-                            Num_Points  = Settings["Num Test Coll Points"],
-                            Device      = Settings["Device"]);
+        Test_Coll_Points : List[torch.Tensor]= [];
+        for i in range(Num_DataSets):
+            Test_Coll_Points.append(Generate_Points(
+                                Bounds      = Data_Dict["Input Bounds"][i],
+                                Num_Points  = Settings["Num Test Coll Points"],
+                                Device      = Settings["Device"]));
 
         # Evaluate losses on the testing points.
         Test_Dict = Testing(    U           = U,
@@ -289,48 +306,62 @@ def main():
                                 Weights     = Settings["Weights"],
                                 Device      = Settings["Device"]);
 
-        Test_Losses["Data Losses"][t]   = Test_Dict["Data Loss"];
-        Test_Losses["Coll Losses"][t]   = Test_Dict["Coll Loss"];
-        Test_Losses["Total Losses"][t]  = Test_Dict["Total Loss"];
+        # Append the test loss history.
+        for i in range(Num_DataSets):
+            Test_Losses[i]["Data Losses"][t]   = Test_Dict["Data Losses"][i];
+            Test_Losses[i]["Coll Losses"][t]   = Test_Dict["Coll Losses"][i];
+            Test_Losses[i]["Total Losses"][t]  = Test_Dict["Total Losses"][i];
 
-        # Now record the parameter losses.
-        Parameter_Losses["Lp Losses"][t]    = Test_Dict["Lp Loss"];
-        Parameter_Losses["L2 Losses"][t]    = Test_Dict["L2 Loss"];
+        # Now record the Lp, L2 losses.
+        Lp_Losses[t] = Test_Dict["Lp Loss"];
+
+        for i in range(Num_DataSets):
+            L2_Losses[i][t] = Test_Dict["L2 Losses"][i];
 
 
         ########################################################################
         # Update targeted residual points.
 
-        # Find the Absolute value of the residuals. Isolate those corresponding
-        # to the "random" collocation points.
-        Abs_Residual        : torch.Tensor = torch.abs(Train_Dict["Residual"]);
-        Random_Residuals    : torch.Tensor = Abs_Residual[:Settings["Num Train Coll Points"]];
+        for i in range(Num_DataSets):
+            # Find the Absolute value of the residuals for the ith data set. 
+            # Isolate those corresponding to the "random" collocation points.
+            Abs_Residual        : torch.Tensor = torch.abs(Train_Dict["Residuals"][i]);
+            Random_Residuals    : torch.Tensor = Abs_Residual[:Settings["Num Train Coll Points"]];
 
-        # Evaluate the mean, standard deviation of the absolute residual at the
-        # random points.
-        Residual_Mean   : torch.Tensor = torch.mean(Random_Residuals);
-        Residual_SD     : torch.Tensor = torch.std(Random_Residuals);
+            # Evaluate the mean, standard deviation of the absolute residual at the
+            # random points.
+            Residual_Mean   : torch.Tensor = torch.mean(Random_Residuals);
+            Residual_SD     : torch.Tensor = torch.std(Random_Residuals);
 
-        # Determine which collocation points have residuals that are very far
-        # from the mean. At these points, the PDE has a lot of trouble learning
-        # something meaningful. The network/PDE needs to adjust its behavior
-        # here, so we should hold onto that point.
-        Cutoff                  : float         = Residual_Mean + 3*Residual_SD
-        Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
+            # Determine which collocation points have residuals that are very far
+            # from the mean. At these points, the PDE has a lot of trouble learning
+            # something meaningful. The network/PDE needs to adjust its behavior
+            # here, so we should hold onto that point.
+            Cutoff                  : float         = Residual_Mean + 3*Residual_SD
+            Big_Residual_Indices    : torch.Tensor  = torch.greater_equal(Abs_Residual, Cutoff);
 
-        # Keep the corresponding collocation points.
-        Targeted_Coll_Pts       : torch.Tensor  = Coll_Points[Big_Residual_Indices, :].detach();
+            # Keep the corresponding collocation points.
+            Targeted_Coll_Pts[i] = Train_Coll_Points[i][Big_Residual_Indices, :].detach();
 
 
         ########################################################################
         # Report!
 
         if(t % 10 == 0 or t == Settings["Num Epochs"] - 1):
-            print("            | Train:\t Data = %.7f\t Coll = %.7f\t Total = %.7f" % (Train_Dict["Data Loss"], Train_Dict["Coll Loss"], Train_Dict["Total Loss"]));
-            print("            | Test: \t Data = %.7f\t Coll = %.7f\t Total = %.7f" % (Test_Dict["Data Loss"], Test_Dict["Coll Loss"], Test_Dict["Total Loss"]));
-            print("Epoch #%-4d |       \t Lp   = %.7f\t L2   = %.7f" % (t, Test_Dict["Lp Loss"], Test_Dict["L2 Loss"]))
+            for i in range(Num_DataSets):
+                print("            |");
+                print("            | Train:\t Data[%u] = %.7f\t Coll[%u] = %.7f\t Total[%u] = %.7f" % (i, Train_Dict["Data Losses"][i], i, Train_Dict["Coll Losses"][i], i, Train_Dict["Total Losses"][i]));
+                print("            | Test: \t Data[%u] = %.7f\t Coll[%u] = %.7f\t Total[%u] = %.7f" % (i, Test_Dict["Data Losses"][i], i, Test_Dict["Coll Losses"][i], i, Test_Dict["Total Losses"][i]));
+                if(i == 0):
+                    print("Epoch #%-4d |       \t Lp      = %.7f\t L2[%u]   = %.7f" % (t + 1, Test_Dict["Lp Loss"], i, Test_Dict["L2 Losses"][i]));
+                else: 
+                    print("            |       \t Lp      = %.7f\t L2[%u]   = %.7f" % (Test_Dict["Lp Loss"], i, Test_Dict["L2 Losses"][i]));
+                print("            |");
         else:
-            print("Epoch #%-4d | \t\t Targeted %3d \t\t Cutoff = %g"   % (t, Targeted_Coll_Pts.shape[0], Cutoff));
+            print("Epoch #%-4d | \t" % (t + 1), end = '');
+            for i in range(Num_DataSets):
+                print("\t Targeted[%u] = %3d \t Cutoff[%u] = %.7f "   % (i, Targeted_Coll_Pts[i].shape[0], i, Cutoff), end = '');
+            print();
 
     # Report runtime!
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
@@ -398,7 +429,10 @@ def main():
     # end of the file name. If that also corresponds to an existing save, then
     # we replace the "1" with a "2" and so on until we get save name that does
     # not already exist.
-    Base_File_Name : str = Settings["DataSet Name"] + "_" + Settings["Hidden Activation Function"] + "_" + Settings["Optimizer"]
+    Base_File_Name  : str = "";
+    for i in range(Num_DataSets):
+        Base_File_Name += Settings["DataSet Names"][i] + "_";
+    Base_File_Name  += Settings["Hidden Activation Function"] + "_" + Settings["Optimizer"];
 
     Counter         : int = 0;
     Save_File_Name  : str = Base_File_Name;
@@ -406,6 +440,11 @@ def main():
         # Increment the counter, try appending that onto Base_File_Name.
         Counter         += 1;
         Save_File_Name   = Base_File_Name + ("_%u" % Counter);
+
+    # Next, get each U's state
+    U_States : List[Dict] = [];
+    for i in range(Num_DataSets):
+        U_States.append(U[i].Get_State());
 
     # Next, get the encoding vectors for each element of Derivatives.
     Derivative_Encodings : List[numpy.ndarray] = [];
@@ -420,7 +459,7 @@ def main():
     LHS_Term_State : Dict = Settings["LHS Term"].Get_State();    
 
     # We can now save!
-    torch.save({"U State"               : U.Get_State(),
+    torch.save({"U States"              : U_States,
                 "Xi"                    : Xi,
                 "Optimizer"             : Optimizer.state_dict(),
                 "Derivative Encodings"  : Derivative_Encodings,
@@ -435,10 +474,11 @@ def main():
     # Plot. 
 
     Plot_Losses(Save_File_Name      = Save_File_Name,
-                Train_Losses        = [Train_Losses],
-                Test_Losses         = [Test_Losses],
-                Parameter_Losses    = [Parameter_Losses],
-                Labels              = [Save_File_Name]);
+                Train_Losses        = Train_Losses,
+                Test_Losses         = Test_Losses,
+                L2_Losses           = L2_Losses,
+                Lp_Losses           = Lp_Losses,
+                Labels              = Settings["DataSet Names"]);
                 
 
 

@@ -18,11 +18,11 @@ from    Derivative import Derivative;
 from    Term       import Term;
 
 
-def Training(   U               : Network,
+def Training(   U               : List[Network],
                 Xi              : torch.Tensor,
-                Coll_Points     : torch.Tensor,
-                Inputs          : torch.Tensor,
-                Targets         : torch.Tensor,
+                Coll_Points     : List[torch.Tensor],
+                Inputs          : List[torch.Tensor],
+                Targets         : List[torch.Tensor],
                 Derivatives     : List[Derivative],
                 LHS_Term        : Term,
                 RHS_Terms       : List[Term],
@@ -31,6 +31,9 @@ def Training(   U               : Network,
                 Optimizer       : torch.optim.Optimizer,
                 Device          : torch.device = torch.device('cpu')) -> Dict:
     """ 
+    I need to update this.
+
+
     This function runs one epoch of training. We enforce the learned PDE 
     (library-Xi product) at the Coll_Points. We also make U match the Targets at
     the Inputs.
@@ -94,19 +97,29 @@ def Training(   U               : Network,
         residual at the ith collocation point.
     """
 
-    # Put U in training mode.
-    U.train();
+    assert(len(U) == len(Coll_Points));
+    assert(len(U) == len(Inputs));
+    assert(len(U) == len(Targets));
+
+    Num_DataSets : int = len(U);
+
+    # Put each U in training mode.
+    for i in range(Num_DataSets):
+        U[i].train();
 
     # Initialize variables to track the residual, losses. We need to do this
     # because we find these variables in the Closure function (which has its own
     # scope. Thus, any variables created in Closure are inaccessible from
     # outside Closure).
-    Residual_Buffer         = torch.empty(Coll_Points.shape[0], dtype = torch.float32);
-    Coll_Loss_Buffer        =    torch.empty(1, dtype = torch.float32);
-    Data_Loss_Buffer        = torch.empty(1, dtype = torch.float32);
-    Lp_Loss_Buffer          = torch.empty(1, dtype = torch.float32);
-    L2_Loss_Buffer  = torch.empty(1, dtype = torch.float32);
-    Total_Loss_Buffer       = torch.empty(1, dtype = torch.float32);
+    Residual_List       : List[float] = [];
+    Coll_Loss_List      : List[float] = [0]*Num_DataSets;
+    Data_Loss_List      : List[float] = [0]*Num_DataSets;
+    L2_Loss_List        : List[float] = [0]*Num_DataSets;
+    Lp_Loss_Buffer      = 0.0;
+    Total_Loss_List     : List[float] = [0]*Num_DataSets;
+
+    for i in range(Num_DataSets):
+        Residual_List.append(torch.empty(Coll_Points[i].shape[0], dtype = torch.float32));
 
     # Define closure function (needed for LBFGS)
     def Closure() -> torch.Tensor:
@@ -114,63 +127,78 @@ def Training(   U               : Network,
         if (torch.is_grad_enabled()):
             Optimizer.zero_grad();
 
-        # Evaluate the Losses
-        Coll_Loss_Value, Residual = Coll_Loss(
-                                        U           = U,
-                                        Xi          = Xi,
-                                        Coll_Points = Coll_Points,
-                                        Derivatives = Derivatives,
-                                        LHS_Term    = LHS_Term,
-                                        RHS_Terms   = RHS_Terms,
-                                        Device      = Device);
+        # Set up buffers to hold the losses
+        Coll_Loss_Value     = torch.zeros(1, dtype = torch.float32);
+        Data_Loss_Value     = torch.zeros(1, dtype = torch.float32);
+        L2_Loss_Value       = torch.zeros(1, dtype = torch.float32);
+        Total_Loss_Value    = torch.zeros(1, dtype = torch.float32);
 
-        Data_Loss_Value = Data_Loss(    U                   = U,
-                                        Inputs              = Inputs,
-                                        Targets             = Targets);
+        # First, calculate the L2 loss, since it is not specific to each data set.
+        Lp_Loss_Value = Lp_Loss(    Xi      = Xi,
+                                    p       = p);
+        Lp_Loss_Buffer = Lp_Loss_Value.detach().item()
 
-        Lp_Loss_Value = Lp_Loss(        Xi      = Xi,
-                                        p       = p);
+        # Now calculate the losses for each data set.
+        for i in range(Num_DataSets):
+            # Get the collocation, data, and L2 loss for the ith data set.
+            ith_Coll_Loss_Value, ith_Residual = Coll_Loss(
+                                            U           = U[i],
+                                            Xi          = Xi,
+                                            Coll_Points = Coll_Points[i],
+                                            Derivatives = Derivatives,
+                                            LHS_Term    = LHS_Term,
+                                            RHS_Terms   = RHS_Terms,
+                                            Device      = Device);
 
-        L2_Loss_Value = L2_Squared_Loss(U = U);
+            ith_Data_Loss_Value = Data_Loss(U                   = U[i],
+                                            Inputs              = Inputs[i],
+                                            Targets             = Targets[i]);
 
-        Total_Loss       = (Weights["Data"]*Data_Loss_Value + 
-                            Weights["Coll"]*Coll_Loss_Value + 
-                            Weights["Lp"]*Lp_Loss_Value + 
-                            Weights["L2"]*L2_Loss_Value);
+            ith_L2_Loss_Value = L2_Squared_Loss(U = U[i]);
 
-        # Store their values in the buffers.
-        Residual_Buffer[:]      = Residual;
-        Coll_Loss_Buffer[:]     = Coll_Loss_Value;
-        Data_Loss_Buffer[:]     = Data_Loss_Value;
-        Lp_Loss_Buffer[:]       = Lp_Loss_Value;
-        L2_Loss_Buffer[:]       = L2_Loss_Value;
-        Total_Loss_Buffer[:]    = Total_Loss;
+            ith_Total_Loss_Value = (Weights["Data"]*ith_Data_Loss_Value + 
+                                    Weights["Coll"]*ith_Coll_Loss_Value + 
+                                    Weights["Lp"]*Lp_Loss_Value + 
+                                    Weights["L2"]*ith_L2_Loss_Value);
 
+            # Store those losses in the buffers (for the returned dict)
+            Residual_List[i][:]   = ith_Residual.detach();
+            Coll_Loss_List[i]  = ith_Coll_Loss_Value.detach().item();
+            Data_Loss_List[i] = ith_Data_Loss_Value.detach().item();
+            L2_Loss_List[i]    = ith_L2_Loss_Value.detach().item();
+            Total_Loss_List[i] = ith_Total_Loss_Value.detach().item();
+
+            # Finally, accumulate the losses.
+            Coll_Loss_Value     += ith_Coll_Loss_Value;
+            Data_Loss_Value     += ith_Data_Loss_Value;
+            L2_Loss_Value       += ith_L2_Loss_Value;
+            Total_Loss_Value    += ith_Total_Loss_Value;
+        
         # Back-propagate to compute gradients of Total_Loss with respect to
         # network parameters (only do if this if the loss requires grad)
-        if (Total_Loss.requires_grad == True):
-            Total_Loss.backward();
+        if (Total_Loss_Value.requires_grad == True):
+            Total_Loss_Value.backward();
 
-        return Total_Loss;
+        return Total_Loss_Value;
 
     # update network parameters.
     Optimizer.step(Closure);
 
     # Return the residual tensor.
-    return {"Residual"      : Residual_Buffer,
-            "Coll Loss"     : Coll_Loss_Buffer.item(),
-            "Data Loss"     : Data_Loss_Buffer.item(),
-            "Lp Loss"       : Lp_Loss_Buffer.item(),
-            "L2 Loss"       : L2_Loss_Buffer.item(),
-            "Total Loss"    : Total_Loss_Buffer.item()};
+    return {"Residuals"     : Residual_List,
+            "Coll Losses"   : Coll_Loss_List,
+            "Data Losses"   : Data_Loss_List,
+            "Lp Loss"       : Lp_Loss_Buffer,
+            "L2 Losses"     : L2_Loss_List,
+            "Total Losses"  : Total_Loss_List};
 
 
 
-def Testing(    U               : Network,
+def Testing(    U               : List[Network],
                 Xi              : Network,
-                Coll_Points     : torch.Tensor,
-                Inputs          : torch.Tensor,
-                Targets         : torch.Tensor,
+                Coll_Points     : List[torch.Tensor],
+                Inputs          : List[torch.Tensor],
+                Targets         : List[torch.Tensor],
                 Derivatives     : List[Derivative],
                 LHS_Term        : Term,
                 RHS_Terms       : List[Term],
@@ -178,6 +206,9 @@ def Testing(    U               : Network,
                 Weights         : Dict[str, float],
                 Device          : torch.device = torch.device('cpu')) -> Dict[str, float]:
     """ 
+    UPDATE ME
+
+
     This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
@@ -234,38 +265,49 @@ def Testing(    U               : Network,
         "Total Loss": a float housing the total loss. 
     """
 
-    # Put U in evaluation mode
-    U.eval();
+    assert(len(U) == len(Coll_Points));
+    assert(len(U) == len(Inputs));
+    assert(len(U) == len(Targets));
+    
+    Num_DataSets : int = len(U);
 
-    # Get the losses
-    Data_Loss_Value : torch.Tensor  = Data_Loss(
-            U           = U,
-            Inputs      = Inputs,
-            Targets     = Targets);
+    # Put each U in evaluation mode
+    for i in range(Num_DataSets):
+        U[i].eval();
+    
+    # First, evaluate the Lp loss, since this does not depend on the data set.
+    Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
+                                        p     = p).item();
 
-    Coll_Loss_Value : torch.Tensor = Coll_Loss(U           = U,
+    # Get the losses for each data set.
+    Data_Loss_List  : List[float] = [0]*Num_DataSets;
+    Coll_Loss_List  : List[float] = [0]*Num_DataSets;
+    L2_Loss_List    : List[float] = [0]*Num_DataSets;
+    Total_Loss_List : List[float] = [0]*Num_DataSets;
+
+    for i in range(Num_DataSets):
+        Data_Loss_List[i] = Data_Loss(  U           = U[i],
+                                        Inputs      = Inputs[i],
+                                        Targets     = Targets[i]).item();
+
+        Coll_Loss_List[i] = Coll_Loss(  U           = U[i],
                                         Xi          = Xi,
-                                        Coll_Points = Coll_Points,
+                                        Coll_Points = Coll_Points[i],
                                         Derivatives = Derivatives,
                                         LHS_Term    = LHS_Term,
                                         RHS_Terms   = RHS_Terms,
-                                        Device      = Device)[0];
+                                        Device      = Device)[0].item();
 
-    Lp_Loss_Value : torch.Tensor = Lp_Loss(    
-                                        Xi    = Xi,
-                                        p     = p);
+        L2_Loss_List[i] = L2_Squared_Loss(U = U[i]).item();
 
-    L2_Loss_Value : torch.Tensor = L2_Squared_Loss(    
-                                        U = U);
-
-    Total_Loss : torch.Tensor = (   Weights["Data"]*Data_Loss_Value + 
-                                    Weights["Coll"]*Coll_Loss_Value + 
-                                    Weights["Lp"]*Lp_Loss_Value + 
-                                    Weights["L2"]*L2_Loss_Value);
+        Total_Loss_List[i] =          ( Weights["Data"]*Data_Loss_List[i] + 
+                                        Weights["Coll"]*Coll_Loss_List[i] + 
+                                        Weights["Lp"]*Lp_Loss_Value + 
+                                        Weights["L2"]*L2_Loss_List[i]);
 
     # Return the losses.
-    return {"Data Loss"     : Data_Loss_Value.item(),
-            "Coll Loss"     : Coll_Loss_Value.item(),
-            "Lp Loss"       : Lp_Loss_Value.item(),
-            "L2 Loss"       : L2_Loss_Value.item(),
-            "Total Loss"    : Total_Loss.item()};
+    return {"Data Losses"     : Data_Loss_List,
+            "Coll Losses"     : Coll_Loss_List,
+            "Lp Loss"       : Lp_Loss_Value,
+            "L2 Losses"       : L2_Loss_List,
+            "Total Losses"    : Total_Loss_List};

@@ -10,7 +10,8 @@ from    typing      import Dict, List;
 def Plot_Losses(Save_File_Name      : str,
                 Train_Losses        : List[Dict[str, numpy.ndarray]],
                 Test_Losses         : List[Dict[str, numpy.ndarray]],
-                Parameter_Losses    : List[Dict[str, numpy.ndarray]],
+                L2_Losses           : List[numpy.ndarray],
+                Lp_Losses           : numpy.ndarray,
                 Labels              : List[str]) -> None:
     """
     This function plots loss histories. 
@@ -21,15 +22,19 @@ def Plot_Losses(Save_File_Name      : str,
     Save_File_Name: This function makes a new directory to house the figures. "Save_File_Name" is
     the name of that directory.
 
-    Train/Test/Parameter_Losses: These are dicts housing the Train/Test/Parameter losses recorded
-    during training. These should be the corresponding entries of the Results dictionary returned
-    by the Build_Train_Autoencoder function.
+    Train/Test_Losses: A list of dictionaries. The ith dictionary should house a dictionary with 
+    the test/train loss histories of the ith solution network.
+
+    L2_Losses: A list of numpy arrays whose ith entry holds the L2 loss history for the ith 
+    solution network.
+
+    Lp_Losses: A numpy ndarray whose ith entry holds the Lp loss from the ith epoch.
 
     Labels: A List of strings. We use this to label the plots.
     """
 
     assert(len(Train_Losses) == len(Test_Losses));
-    assert(len(Train_Losses) == len(Parameter_Losses));
+    assert(len(Train_Losses) == len(L2_Losses));
     assert(len(Train_Losses) == len(Labels));
 
     ###############################################################################################
@@ -51,9 +56,6 @@ def Plot_Losses(Save_File_Name      : str,
     Test_Data_Losses    : List[numpy.ndarray] = [];
     Test_Coll_Losses    : List[numpy.ndarray] = [];
 
-    Lp_Losses           : List[numpy.ndarray] = [];
-    L2_Losses           : List[numpy.ndarray] = [];
-
     for i in range(Num_Experiments):
         Train_Total_Losses  .append(Train_Losses[i]["Total Losses"]);
         Train_Data_Losses   .append(Train_Losses[i]["Data Losses"]);
@@ -62,9 +64,6 @@ def Plot_Losses(Save_File_Name      : str,
         Test_Total_Losses   .append(Test_Losses[i]["Total Losses"]);        
         Test_Data_Losses    .append(Test_Losses[i]["Data Losses"]);
         Test_Coll_Losses    .append(Test_Losses[i]["Coll Losses"]);
-
-        Lp_Losses           .append(Parameter_Losses[i]["Lp Losses"]);
-        L2_Losses           .append(Parameter_Losses[i]["L2 Losses"]);
 
     # Generate data frames.
     Total_DF : pandas.DataFrame = Make_Test_Train_DataFrame(
@@ -83,8 +82,8 @@ def Plot_Losses(Save_File_Name      : str,
                                     Labels              = Labels);
    
     Lp_DF : pandas.DataFrame = Make_Parameter_DataFrame(
-                                    Parameter_Losses    = Lp_Losses,
-                                    Labels              = Labels);
+                                    Parameter_Losses    = [Lp_Losses],
+                                    Labels              = [""]);
 
     L2_DF : pandas.DataFrame = Make_Parameter_DataFrame(
                                     Parameter_Losses    = L2_Losses,

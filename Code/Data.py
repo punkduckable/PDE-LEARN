@@ -4,7 +4,7 @@ from    typing  import List, Dict, Callable;
 
 
 def Data_Loader(DataSet_Name   : str,
-                Device         : torch.device):
+                Device         : torch.device) -> Dict:
     """ 
     This function loads a DataSet from file, converts it contents to a torch
     Tensor, and returns the result.
@@ -32,8 +32,8 @@ def Data_Loader(DataSet_Name   : str,
         "Input Bounds": A 2 column array whose ith row holds the lower and
         upper bounds of the problem domain along the ith axis.
 
-        "Number Spatial Dimensions": An integer specifying the number of spatial
-        dimensions (one less than the number of rows in "Input Bounds").  
+        "Number of Dimensions": An integer specifying the number of dimensions
+        (the number of rows in "Input Bounds").  
     """
 
     # Load the DataSet.
@@ -41,12 +41,12 @@ def Data_Loader(DataSet_Name   : str,
     DataSet             = numpy.load(DataSet_Path);
 
     # Now build the return dictionary
-    Data_Dict   : Dict  = { "Train Inputs"              : torch.from_numpy(DataSet["Train_Inputs"]).to( device = Device),
-                            "Train Targets"             : torch.from_numpy(DataSet["Train_Targets"]).to(device = Device),
-                            "Test Inputs"               : torch.from_numpy(DataSet["Test_Inputs"]).to(  device = Device),
-                            "Test Targets"              : torch.from_numpy(DataSet["Test_Targets"]).to( device = Device),
-                            "Input Bounds"              : DataSet["Input_Bounds"],
-                            "Number Spatial Dimensions" : DataSet["Input_Bounds"].shape[0] - 1};
+    Data_Dict   : Dict  = { "Train Inputs"          : torch.from_numpy(DataSet["Train_Inputs"]).to( device = Device),
+                            "Train Targets"         : torch.from_numpy(DataSet["Train_Targets"]).to(device = Device),
+                            "Test Inputs"           : torch.from_numpy(DataSet["Test_Inputs"]).to(  device = Device),
+                            "Test Targets"          : torch.from_numpy(DataSet["Test_Targets"]).to( device = Device),
+                            "Input Bounds"          : DataSet["Input_Bounds"],
+                            "Number of Dimensions"  : DataSet["Input_Bounds"].shape[0]};
 
     # All done... return!
     return Data_Dict;
