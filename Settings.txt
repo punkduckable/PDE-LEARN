@@ -2,9 +2,9 @@
 # Save, Load settings.
 
 # Load settings.
-Load U from Save [bool]:                         True
-Load Xi, Library from Save [bool]:               True
-Load Optimizer from Save [bool]:                 True
+Load U from Save [bool]:                         False
+Load Xi, Library from Save [bool]:               False
+Load Optimizer from Save [bool]:                 False
     Load File Name [str]:                        KdV_Sine_N100_P5000_KdV_Sine_N10_P250_Rational_Adam_3
 
 
@@ -47,11 +47,11 @@ Number of Testing Collocation Points [int]:      1000
 
 Optimizer [Adam, LBFGS]:                         Adam
 Learning Rate [float]:                           .001
-Number of Epochs [int]:                          100
+Number of Epochs [int]:                          1000
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet Names [str]:                             [KdV_Sine_N100_P5000, KdV_Sine_N10_P250]
+DataSet Names [List of str]:                     [KdV_Sine_N100_P5000, KdV_Sine_N10_P250]

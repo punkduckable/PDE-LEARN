@@ -42,7 +42,7 @@ def Plot_Losses(Save_File_Name      : str,
 
     # Make a folder to house the figures.
     Plot_Directory_Name : str = "Loss_History_" + Save_File_Name;
-    Plot_Directory_Path : str = "../Figures/" + Plot_Directory_Name;
+    Plot_Directory_Path : str = "../Figures/"   + Plot_Directory_Name;
     os.mkdir(Plot_Directory_Path);
 
     # Extract each loss type for each experiment.
@@ -78,7 +78,7 @@ def Plot_Losses(Save_File_Name      : str,
 
     Coll_DF : pandas.DataFrame = Make_Test_Train_DataFrame(
                                     Train_Losses        = Train_Coll_Losses,
-                                    Test_Losses         = Train_Coll_Losses,
+                                    Test_Losses         = Test_Coll_Losses,
                                     Labels              = Labels);
    
     Lp_DF : pandas.DataFrame = Make_Parameter_DataFrame(

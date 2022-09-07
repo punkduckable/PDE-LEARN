@@ -133,7 +133,7 @@ def Settings_Reader() -> Dict:
     # Data settings.
 
     # Data file name. Note that the data file should NOT contain noise.
-    Settings["DataSet Names"] =  Read_List_Setting(File, "DataSet Names [str]:");
+    Settings["DataSet Names"] =  Read_List_Setting(File, "DataSet Names [List of str]:");
 
     # All done! Return the settings!
     File.close();

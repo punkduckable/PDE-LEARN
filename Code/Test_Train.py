@@ -18,47 +18,48 @@ from    Derivative import Derivative;
 from    Term       import Term;
 
 
-def Training(   U               : List[Network],
-                Xi              : torch.Tensor,
-                Coll_Points     : List[torch.Tensor],
-                Inputs          : List[torch.Tensor],
-                Targets         : List[torch.Tensor],
-                Derivatives     : List[Derivative],
-                LHS_Term        : Term,
-                RHS_Terms       : List[Term],
-                p               : float,
-                Weights         : Dict[str, float],
-                Optimizer       : torch.optim.Optimizer,
-                Device          : torch.device = torch.device('cpu')) -> Dict:
+def Training(   U_List              : List[Network],
+                Xi                  : torch.Tensor,
+                Coll_Points_List    : List[torch.Tensor],
+                Inputs_List         : List[torch.Tensor],
+                Targets_List        : List[torch.Tensor],
+                Derivatives         : List[Derivative],
+                LHS_Term            : Term,
+                RHS_Terms           : List[Term],
+                p                   : float,
+                Weights             : Dict[str, float],
+                Optimizer           : torch.optim.Optimizer,
+                Device              : torch.device = torch.device('cpu')) -> Dict:
     """ 
     This function runs one epoch of training. We enforce the learned PDE 
-    (library-Xi product) for each U[i] at its corresponding set of Coll_Points. 
-    We also make each U[i] match Targets[i] at the Inputs[i].
+    (library-Xi product) for each U_List[i] at its corresponding set of 
+    Coll_Points. We also make each U_List[i] match Targets_List[i] at the 
+    Inputs_List[i].
 
     ----------------------------------------------------------------------------
     Arguments:
 
-    U: A list of Networks whose ith element holds the network that approximates
-    the ith PDE solution.
+    U_List: A list of Networks whose ith element holds the network that 
+    approximates the ith PDE solution.
 
     Xi: The vector that stores the coefficients of the library terms.
 
-    Coll_Points: A list of tensors whose ith element holds the the collocation
-    points at which we evaluate how well U[i] satisfies the learned PDE. 
-    If each U[i] accepts d spatial coordinates, then each list entry should be 
-    a d+1 column tensor whose kth row holds the t, x_1,... x_d coordinates of 
-    the kth Collocation point for U[i].
+    Coll_Points_List: A list of tensors whose ith element holds the the 
+    collocation points at which we evaluate how well U_List[i] satisfies the 
+    learned PDE. If each U_List[i] accepts d spatial coordinates, then each 
+    list entry should be a d+1 column tensor whose kth row holds the t, x_1, 
+    ... , x_d coordinates of the kth Collocation point for U_List[i].
 
-    Inputs: A list of tensors whose ith element holds the coordinates of the 
-    points at which we compare U[i] to the ith true solution. If each U[i] 
-    accepts d spatial coordinates, then this should be a d+1 column tensor 
-    whose kth row holds the t, x_1,... x_d coordinates of the kth Data-point
-    for U[i].
+    Inputs_List: A list of tensors whose ith element holds the coordinates of 
+    the points at which we compare U_List[i] to the ith true solution. If each 
+    U_List[i] accepts d spatial coordinates, then this should be a d+1 column 
+    tensor whose kth row holds the t, x_1,... x_d coordinates of the kth 
+    Data-point for U_List[i].
 
-    Targets: A list of Tensors whose ith entry holds the value of the ith true 
-    solution at Inputs[i]. If Inputs[i] has N rows, then this should be an N 
-    element tensor of floats whose kth element holds the value of the ith true 
-    solution at the kth row of Inputs[k].
+    Targets_List: A list of Tensors whose ith entry holds the value of the ith 
+    true solution at Inputs_List[i]. If Inputs_List[i] has N rows, then this 
+    should be an N element tensor of floats whose kth element holds the value 
+    of the ith true solution at the kth row of Inputs_List[k].
 
     Derivatives: We try to learn a PDE of the form
             T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
@@ -97,15 +98,15 @@ def Training(   U               : List[Network],
         "Lp Loss": A float housing the value of the Lp loss.
     """
 
-    assert(len(U) == len(Coll_Points));
-    assert(len(U) == len(Inputs));
-    assert(len(U) == len(Targets));
+    assert(len(U_List) == len(Coll_Points_List));
+    assert(len(U_List) == len(Inputs_List));
+    assert(len(U_List) == len(Targets_List));
 
-    Num_DataSets : int = len(U);
+    Num_DataSets : int = len(U_List);
 
     # Put each U in training mode.
     for i in range(Num_DataSets):
-        U[i].train();
+        U_List[i].train();
 
     # Initialize variables to track the residual, losses. We need to do this
     # because we find these variables in the Closure function (which has its own
@@ -119,7 +120,7 @@ def Training(   U               : List[Network],
     Total_Loss_List     : List[float] = [0]*Num_DataSets;
 
     for i in range(Num_DataSets):
-        Residual_List.append(torch.empty(Coll_Points[i].shape[0], dtype = torch.float32));
+        Residual_List.append(torch.empty(Coll_Points_List[i].shape[0], dtype = torch.float32));
 
     # Define closure function (needed for LBFGS)
     def Closure() -> torch.Tensor:
@@ -142,19 +143,19 @@ def Training(   U               : List[Network],
         for i in range(Num_DataSets):
             # Get the collocation, data, and L2 loss for the ith data set.
             ith_Coll_Loss_Value, ith_Residual = Coll_Loss(
-                                            U           = U[i],
+                                            U           = U_List[i],
                                             Xi          = Xi,
-                                            Coll_Points = Coll_Points[i],
+                                            Coll_Points = Coll_Points_List[i],
                                             Derivatives = Derivatives,
                                             LHS_Term    = LHS_Term,
                                             RHS_Terms   = RHS_Terms,
                                             Device      = Device);
 
-            ith_Data_Loss_Value = Data_Loss(U                   = U[i],
-                                            Inputs              = Inputs[i],
-                                            Targets             = Targets[i]);
+            ith_Data_Loss_Value = Data_Loss(U                   = U_List[i],
+                                            Inputs              = Inputs_List[i],
+                                            Targets             = Targets_List[i]);
 
-            ith_L2_Loss_Value = L2_Squared_Loss(U = U[i]);
+            ith_L2_Loss_Value = L2_Squared_Loss(U = U_List[i]);
 
             ith_Total_Loss_Value = (Weights["Data"]*ith_Data_Loss_Value + 
                                     Weights["Coll"]*ith_Coll_Loss_Value + 
@@ -194,21 +195,18 @@ def Training(   U               : List[Network],
 
 
 
-def Testing(    U               : List[Network],
-                Xi              : Network,
-                Coll_Points     : List[torch.Tensor],
-                Inputs          : List[torch.Tensor],
-                Targets         : List[torch.Tensor],
-                Derivatives     : List[Derivative],
-                LHS_Term        : Term,
-                RHS_Terms       : List[Term],
-                p               : float,
-                Weights         : Dict[str, float],
-                Device          : torch.device = torch.device('cpu')) -> Dict[str, float]:
+def Testing(    U_List              : List[Network],
+                Xi                  : Network,
+                Coll_Points_List    : List[torch.Tensor],
+                Inputs_List         : List[torch.Tensor],
+                Targets_List        : List[torch.Tensor],
+                Derivatives         : List[Derivative],
+                LHS_Term            : Term,
+                RHS_Terms           : List[Term],
+                p                   : float,
+                Weights             : Dict[str, float],
+                Device              : torch.device = torch.device('cpu')) -> Dict[str, float]:
     """ 
-    UPDATE ME
-
-
     This function evaluates the losses.
 
     Note: You CAN NOT run this function with no_grad set True. Why? Because we
@@ -218,27 +216,27 @@ def Testing(    U               : List[Network],
     ----------------------------------------------------------------------------
     Arguments:
 
-    U: A list of Networks whose ith element holds the network that approximates
-    the ith PDE solution.
+    U_List: A list of Networks whose ith element holds the network that 
+    approximates the ith PDE solution.
 
     Xi: The vector that stores the coefficients of the library terms.
 
-    Coll_Points: A list of tensors whose ith element holds the the collocation
-    points at which we evaluate how well U[i] satisfies the learned PDE. 
-    If each U[i] accepts d spatial coordinates, then each list entry should be 
-    a d+1 column tensor whose kth row holds the t, x_1,... x_d coordinates of 
-    the kth Collocation point for U[i].
+    Coll_Points_List: A list of tensors whose ith element holds the the 
+    collocation points at which we evaluate how well U_List[i] satisfies the 
+    learned PDE. If each U_List[i] accepts d spatial coordinates, then each 
+    list entry should be a d+1 column tensor whose kth row holds the t, x_1, 
+    ... , x_d coordinates of the kth Collocation point for U_List[i].
 
-    Inputs: A list of tensors whose ith element holds the coordinates of the 
-    points at which we compare U[i] to the ith true solution. If each U[i] 
-    accepts d spatial coordinates, then this should be a d+1 column tensor 
-    whose kth row holds the t, x_1,... x_d coordinates of the kth Data-point
-    for U[i].
+    Inputs_List: A list of tensors whose ith element holds the coordinates of 
+    the points at which we compare U_List[i] to the ith true solution. If each 
+    U_List[i] accepts d spatial coordinates, then this should be a d+1 column 
+    tensor whose kth row holds the t, x_1,... x_d coordinates of the kth 
+    Data-point for U_List[i].
 
-    Targets: A list of Tensors whose ith entry holds the value of the ith true 
-    solution at Inputs[i]. If Inputs[i] has N rows, then this should be an N 
-    element tensor of floats whose kth element holds the value of the ith true 
-    solution at the kth row of Inputs[k].
+    Targets_List: A list of Tensors whose ith entry holds the value of the ith 
+    true solution at Inputs_List[i]. If Inputs_List[i] has N rows, then this 
+    should be an N element tensor of floats whose kth element holds the value 
+    of the ith true solution at the kth row of Inputs_List[k].
 
     Derivatives: We try to learn a PDE of the form
             T_0(U) = Xi_1*T_1(U) + ... + Xi_n*T_N(U).
@@ -271,15 +269,15 @@ def Testing(    U               : List[Network],
         "Lp Loss": A float housing the value of the Lp loss.
     """
 
-    assert(len(U) == len(Coll_Points));
-    assert(len(U) == len(Inputs));
-    assert(len(U) == len(Targets));
+    assert(len(U_List) == len(Coll_Points_List));
+    assert(len(U_List) == len(Inputs_List));
+    assert(len(U_List) == len(Targets_List));
     
-    Num_DataSets : int = len(U);
+    Num_DataSets : int = len(U_List);
 
     # Put each U in evaluation mode
     for i in range(Num_DataSets):
-        U[i].eval();
+        U_List[i].eval();
     
     # First, evaluate the Lp loss, since this does not depend on the data set.
     Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
@@ -292,19 +290,19 @@ def Testing(    U               : List[Network],
     Total_Loss_List : List[float] = [0]*Num_DataSets;
 
     for i in range(Num_DataSets):
-        Data_Loss_List[i] = Data_Loss(  U           = U[i],
-                                        Inputs      = Inputs[i],
-                                        Targets     = Targets[i]).item();
+        Data_Loss_List[i] = Data_Loss(  U           = U_List[i],
+                                        Inputs      = Inputs_List[i],
+                                        Targets     = Targets_List[i]).item();
 
-        Coll_Loss_List[i] = Coll_Loss(  U           = U[i],
+        Coll_Loss_List[i] = Coll_Loss(  U           = U_List[i],
                                         Xi          = Xi,
-                                        Coll_Points = Coll_Points[i],
+                                        Coll_Points = Coll_Points_List[i],
                                         Derivatives = Derivatives,
                                         LHS_Term    = LHS_Term,
                                         RHS_Terms   = RHS_Terms,
                                         Device      = Device)[0].item();
 
-        L2_Loss_List[i] = L2_Squared_Loss(U = U[i]).item();
+        L2_Loss_List[i] = L2_Squared_Loss(U = U_List[i]).item();
 
         Total_Loss_List[i] =          ( Weights["Data"]*Data_Loss_List[i] + 
                                         Weights["Coll"]*Coll_Loss_List[i] + 
