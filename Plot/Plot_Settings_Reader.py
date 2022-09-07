@@ -10,11 +10,9 @@ Readers_Path    : str = os.path.join(Code_Path, "Readers");
 # Add the Readers, Classes directories to the python path.
 sys.path.append(Readers_Path);
 
-import  torch;
 from    typing          import Dict, List;
 
-from    File_Reader     import Read_Line_After, Read_Error, Read_Bool_Setting, Read_Setting;
-from    Library_Reader  import Read_Library;
+from    File_Reader     import Read_Setting, Read_List_Setting;
 
 
 
@@ -42,7 +40,7 @@ def Settings_Reader() -> Dict:
     Settings["Load File Name"]  = Read_Setting(File, "Load File Name [str]:");
 
     # Data file name. Note that the data file should NOT contain noise.
-    Settings["Mat File Name"]   = Read_Setting(File, "Mat File Name [str]:");
+    Settings["Mat File Names"] : List[str] = Read_List_Setting(File, "Mat File Names [List of str]:");
 
     # All done! Return the settings!
     File.close();

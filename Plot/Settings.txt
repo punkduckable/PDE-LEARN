@@ -3,8 +3,8 @@
 
 # Where is the save file the network, library we want to plot? (The plot we
 # generate will have the same name)
-Load File Name [str]:                            Burgers_Sine_N100_P5000_Rational_Adam_2
+Load File Name [str]:                            KdV_Sine_N100_P5000_KdV_Sine_N10_P250_Rational_Adam_6
 
-# What is the MATLAB dataset? (this should be a .mat file. Do not include the
-# .mat extension).
-Mat File Name [str]:                             Burgers_Sine
+# What is the MATLAB dataset for each solution network? There should be one 
+# .mat file for each data set in the saved file. 
+Mat File Names [List of str]:                    [Kdv_Sine, KdV_Sine]
