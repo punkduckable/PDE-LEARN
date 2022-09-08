@@ -12,11 +12,11 @@ Make_Plot : bool = True;
 
 def main():
     # Specify settings.
-    Data_File_Name          : str   = "Allen_Cahn";
+    Data_File_Name          : str   = "KdV_Sine";
     Num_Spatial_Dimensions  : int   = 1;
-    Noise_Proportion        : float = .75;
+    Noise_Proportion        : float = 0.0;
 
-    Num_Train_Examples      : int   = 5000;
+    Num_Train_Examples      : int   = 250;
     Num_Test_Examples       : int   = 1000;
 
     # Now pass them to "From_MATLAB".
@@ -42,9 +42,9 @@ def From_MATLAB_1D( Data_File_Name      : str,
     and one temporal variable) and generates a sparse and noisy data set from
     it. To do this, we first read in a .mat data set. We assume this file
     contains three fields: t, x, and usol. t and x are ordered lists of the t
-    and x grid lines (lines along which there are gridpoints), respectively. We
+    and x grid lines (lines along which there are grid-points), respectively. We
     assume that the values in x are uniformly spaced. u sol contains the value
-    of the true solution at each gridpoint. Each row of usol contains the
+    of the true solution at each grid-point. Each row of usol contains the
     solution for a particular position, while each column contains the solution
     for a particular time.
 
@@ -113,7 +113,7 @@ def From_MATLAB_1D( Data_File_Name      : str,
         pyplot.show();
 
     # Now, stitch successive the rows of the coordinate matrices together
-    # to make a 1D array. We interpert the result as a 1 column matrix.
+    # to make a 1D array. We interpret the result as a 1 column matrix.
     t_coords_1D : numpy.ndarray = t_coords_matrix.flatten().reshape(-1, 1);
     x_coords_1D : numpy.ndarray = x_coords_matrix.flatten().reshape(-1, 1);
 
@@ -125,15 +125,15 @@ def From_MATLAB_1D( Data_File_Name      : str,
     # distribution over subsets of {1, ... , N} of size Num_Train_Examples,
     # and another over subsets of {1, ... , N} of size Num_Test_Examples.
     # Here, N is the number of coordinates.
-    Train_Indicies : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Train_Examples, replace = False);
-    Test_Indicies  : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Test_Examples , replace = False);
+    Train_Indices : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Train_Examples, replace = False);
+    Test_Indices  : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Test_Examples , replace = False);
 
     # Now select the corresponding testing, training data points/values.
-    Train_Inputs    = All_Data_Coords[Train_Indicies, :];
-    Train_Targets   = All_Data_Values[Train_Indicies];
+    Train_Inputs    = All_Data_Coords[Train_Indices, :];
+    Train_Targets   = All_Data_Values[Train_Indices];
 
-    Test_Inputs     = All_Data_Coords[Test_Indicies, :];
-    Test_Targets    = All_Data_Values[Test_Indicies];
+    Test_Inputs     = All_Data_Coords[Test_Indices, :];
+    Test_Targets    = All_Data_Values[Test_Indices];
 
     # Send everything to Create_Data_Set
     DataSet_Name : str = (  Data_File_Name + "_" +
@@ -157,7 +157,7 @@ def From_MATLAB_2D( Data_File_Name      : str,
     and one temporal variable) and generates a sparse and noisy data set from
     it. To do this, we first read in a .mat data set. We assume this file
     contains four fields: t, x, y, and usol. t, x, and y are ordered lists of
-    the t, x, and y t grid lines (lines along which there are gridpoints),
+    the t, x, and y t grid lines (lines along which there are grid-points),
     respectively. We assume that the values in x and y are uniformly spaced.
     usol is a gigantic 3d array whose i, j, k entry holds the value of the
     solution at (t_i, x_j, y_k), where t_i is the ith entry of t, x_j is the
@@ -213,8 +213,8 @@ def From_MATLAB_2D( Data_File_Name      : str,
     # hold the value of the solution at the i,j,k coordinate.
     t_coords_matrix, x_coords_matrix, y_coords_matrix = numpy.meshgrid(t_points, x_points, y_points);
 
-    # Now, stitch successive the rows of the coordinate matricies together
-    # to make a 1d array. We interpert the result as a 1 column matrix.
+    # Now, stitch successive the rows of the coordinate matrices together
+    # to make a 1d array. We interpret the result as a 1 column matrix.
     t_coords_1D : numpy.ndarray = t_coords_matrix.flatten().reshape(-1, 1);
     x_coords_1D : numpy.ndarray = x_coords_matrix.flatten().reshape(-1, 1);
     y_coords_1D : numpy.ndarray = y_coords_matrix.flatten().reshape(-1, 1);
@@ -227,15 +227,15 @@ def From_MATLAB_2D( Data_File_Name      : str,
     # distribution over subsets of {1, ... , N} of size Num_Train_Examples,
     # and another over subsets of {1, ... , N} of size Num_Test_Examples.
     # Here, N is the number of coordinates.
-    Train_Indicies : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Train_Examples, replace = False);
-    Test_Indicies  : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Test_Examples , replace = False);
+    Train_Indices : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Train_Examples, replace = False);
+    Test_Indices  : numpy.ndarray = numpy.random.choice(All_Data_Coords.shape[0], Num_Test_Examples , replace = False);
 
     # Now select the corresponding testing, training data points/values.
-    Train_Inputs    = All_Data_Coords[Train_Indicies, :];
-    Train_Targets   = All_Data_Values[Train_Indicies];
+    Train_Inputs    = All_Data_Coords[Train_Indices, :];
+    Train_Targets   = All_Data_Values[Train_Indices];
 
-    Test_Inputs     = All_Data_Coords[Test_Indicies, :];
-    Test_Targets    = All_Data_Values[Test_Indicies];
+    Test_Inputs     = All_Data_Coords[Test_Indices, :];
+    Test_Targets    = All_Data_Values[Test_Indices];
 
     # Send everything to Create_Data_Set
     DataSet_Name : str = (  Data_File_Name + "_" +
