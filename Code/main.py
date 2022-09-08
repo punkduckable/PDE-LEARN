@@ -32,7 +32,7 @@ def main():
     # Load the settings, print them.
     Settings : Dict = Settings_Reader();
     for (Setting, Value) in Settings.items():
-        print("%-25s = %s" % (Setting, str(Value)), end = '');
+        print("%-25s = %s" % (Setting, str(Value)));
 
     # Start a setup timer.
     Setup_Timer : float = time.perf_counter();
@@ -120,9 +120,10 @@ def main():
         # Now initialize each U[i].
         U_List : List[Network] = [];
         for i in range(Num_DataSets):
-            U_List.append(Network(   Widths              = Widths,
-                                Hidden_Activation   = Settings["Hidden Activation Function"],
-                                Device              = Settings["Device"]));
+            U_List.append(Network(  Widths              = Widths,
+                                    Hidden_Activation   = Settings["Hidden Activation Function"],
+                                    Output_Activation   = "None",
+                                    Device              = Settings["Device"]));
         
         print("Set up the solution networks using settings in Settings.txt.")
 

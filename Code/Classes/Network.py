@@ -306,9 +306,7 @@ class Network(torch.nn.Module):
         """
 
         # Pass X through the hidden layers. Each has an activation function.
-        for i in range(0, self.Num_Hidden_Layers):
+        for i in range(0, self.Num_Layers):
             X = self.Activation_Functions[i](self.Layers[i](X));
-
-        # Pass through the last layer (which has no activation function) and
-        # return.
-        return self.Layers[self.Num_Layers - 1](X);
+            
+        return X;
