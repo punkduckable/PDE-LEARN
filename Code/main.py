@@ -72,7 +72,7 @@ def main():
 
 
     ############################################################################
-    # Set up U for each data set, as well as the common Xi, Library
+    # Set up U for each data set, as well as the common Xi, Library, and mask.
 
     # First, if we are loading anything, load in the save.
     if( Settings["Load U"]              == True or 
@@ -128,7 +128,7 @@ def main():
         print("Set up the solution networks using settings in Settings.txt.")
 
 
-    # Second, either build Xi + the library or load it from save.
+    # Second, either build Xi + library or load it from save. Also build the mask.
     if(Settings["Load Xi, Library"] == True):
         # First, load Xi.
         Xi : torch.Tensor = Saved_State["Xi"];
@@ -141,15 +141,14 @@ def main():
         
         Settings["Derivatives"] = Derivatives;
         
-        # Finally, load the library (LHS term and RHS Terms)
+        # Next, load the library (LHS term and RHS Terms)
         Settings["LHS Term"] = Build_Term_From_State(State = Saved_State["LHS Term State"]);
 
         RHS_Terms       : List[Term]    = [];
         Num_RHS_Terms   : int           = len(Saved_State["RHS Term States"]);
         for i in range(Num_RHS_Terms):
             RHS_Terms.append(Build_Term_From_State(State = Saved_State["RHS Term States"][i]));
-        
-        Settings["RHS Terms"] = RHS_Terms;
+        Settings["RHS Terms"] = RHS_Terms;         
 
         print("Loaded Xi, Library from file.");
 
@@ -183,6 +182,13 @@ def main():
             print(", ", end = '');
         else:
             print("\n");
+
+    # Build the mask.
+    Mask : torch.Tensor = torch.zeros(Num_RHS_Terms, dtype = torch.bool);
+    if(Settings["Load Xi, Library"] == True and Settings["Mask Small Xi Components"] == True):
+        for i in range(Num_RHS_Terms):
+            if(abs(Xi[i].item()) < 5e-4):
+                Mask[i] = True;   
 
 
     ############################################################################
@@ -264,6 +270,7 @@ def main():
         # Now run a Training Epoch.
         Train_Dict = Training(  U_List              = U_List,
                                 Xi                  = Xi,
+                                Mask                = Mask,
                                 Coll_Points_List    = Train_Coll_Points_List,
                                 Inputs_List         = Data_Dict["Train Inputs"],
                                 Targets_List        = Data_Dict["Train Targets"],
@@ -297,6 +304,7 @@ def main():
         # Evaluate losses on the testing points.
         Test_Dict = Testing(    U_List              = U_List,
                                 Xi                  = Xi,
+                                Mask                = Mask,
                                 Coll_Points_List    = Test_Coll_Points_List,
                                 Inputs_List         = Data_Dict["Test Inputs"],
                                 Targets_List        = Data_Dict["Test Targets"],

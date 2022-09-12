@@ -20,6 +20,7 @@ from    Term       import Term;
 
 def Training(   U_List              : List[Network],
                 Xi                  : torch.Tensor,
+                Mask                : torch.Tensor,
                 Coll_Points_List    : List[torch.Tensor],
                 Inputs_List         : List[torch.Tensor],
                 Targets_List        : List[torch.Tensor],
@@ -43,6 +44,9 @@ def Training(   U_List              : List[Network],
     approximates the ith PDE solution.
 
     Xi: The vector that stores the coefficients of the library terms.
+
+    Mask: A boolean tensor whose shape matches that of Xi. We use this to 
+    compute the Collocation loss (see that doc string).
 
     Coll_Points_List: A list of tensors whose ith element holds the the 
     collocation points at which we evaluate how well U_List[i] satisfies the 
@@ -145,6 +149,7 @@ def Training(   U_List              : List[Network],
             ith_Coll_Loss_Value, ith_Residual = Coll_Loss(
                                             U           = U_List[i],
                                             Xi          = Xi,
+                                            Mask        = Mask,
                                             Coll_Points = Coll_Points_List[i],
                                             Derivatives = Derivatives,
                                             LHS_Term    = LHS_Term,
@@ -197,6 +202,7 @@ def Training(   U_List              : List[Network],
 
 def Testing(    U_List              : List[Network],
                 Xi                  : Network,
+                Mask                : torch.Tensor,
                 Coll_Points_List    : List[torch.Tensor],
                 Inputs_List         : List[torch.Tensor],
                 Targets_List        : List[torch.Tensor],
@@ -220,6 +226,9 @@ def Testing(    U_List              : List[Network],
     approximates the ith PDE solution.
 
     Xi: The vector that stores the coefficients of the library terms.
+
+    Mask: A boolean tensor whose shape matches that of Xi. We use this to 
+    compute the Collocation loss (see that doc string).
 
     Coll_Points_List: A list of tensors whose ith element holds the the 
     collocation points at which we evaluate how well U_List[i] satisfies the 
@@ -296,6 +305,7 @@ def Testing(    U_List              : List[Network],
 
         Coll_Loss_List[i] = Coll_Loss(  U           = U_List[i],
                                         Xi          = Xi,
+                                        Mask        = Mask,
                                         Coll_Points = Coll_Points_List[i],
                                         Derivatives = Derivatives,
                                         LHS_Term    = LHS_Term,

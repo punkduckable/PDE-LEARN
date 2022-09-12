@@ -66,6 +66,7 @@ def Data_Loss(
 def Coll_Loss(
         U           : Network,
         Xi          : torch.Tensor,
+        Mask        : torch.Tensor,
         Coll_Points : torch.Tensor,
         Derivatives : List[Derivative],
         LHS_Term    : Term,
@@ -84,6 +85,10 @@ def Coll_Loss(
 
     Xi: A trainable (requires_grad = True) torch 1D tensor. If there are N
     RHS_Terms, this should be an N element vector.
+
+    Mask: A boolean tensor whose shape matches that of Xi. When adding the kth 
+    RHS term to the Library_Xi product, we check if Mask[k] == False. If so, 
+    We add 0*Xi[k]. Otherwise, we compute the kth library term as usual.
 
     Coll_Points: B by n column tensor, where B is the number of coordinates and
     n is the dimension of the problem domain. The ith row of Coll_Points should
@@ -207,6 +212,11 @@ def Coll_Loss(
 
     # Cycle through the RHS Terms.
     for j in range(len(RHS_Terms)):
+        # Check if the jth term is masked. If so, move on.
+        if(Mask[j] == True):
+            L_U_Xi += 0*Xi[j];
+            continue;
+    
         # Get the term.
         T_j     : Term          = RHS_Terms[j];
 

@@ -5,7 +5,7 @@
 Load U from Save [bool]:                         False
 Load Xi, Library from Save [bool]:               False
 Load Optimizer from Save [bool]:                 False
-    Load File Name [str]:                        KdV_Sine_N100_P5000_KdV_Sine_N10_P250_Rational_Adam_3
+    Load File Name [str]:                        
 
 
 
@@ -35,10 +35,14 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0003, "L2" : 0.0001}
+Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0, "L2" : 0.00001}
 
 Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
+
+# Should we mask out component of Xi that start off sufficiently small (5e-4)? 
+# Ignore this setting unless you are loading Xi and the library from file.
+Mask Small Xi Components [bool]:                 True
 
 
 
@@ -46,12 +50,12 @@ Number of Testing Collocation Points [int]:      1000
 # Optimizer settings.
 
 Optimizer [Adam, LBFGS]:                         Adam
-Learning Rate [float]:                           .001
-Number of Epochs [int]:                          1000
+Learning Rate [float]:                           .0005
+Number of Epochs [int]:                          1500
 
 
 
 ################################################################################
 # Data settings.
 
-DataSet Names [List of str]:                     [KdV_Sine_N100_P5000, KdV_Sine_N10_P250]
+DataSet Names [List of str]:                     [Burgers_Sine_N25_P5000]

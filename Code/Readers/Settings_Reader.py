@@ -109,6 +109,8 @@ def Settings_Reader() -> Dict:
     Settings["Num Train Coll Points"]   = int(Read_Setting(File, "Number of Training Collocation Points [int]:"));
     Settings["Num Test Coll Points"]    = int(Read_Setting(File, "Number of Testing Collocation Points [int]:"));
 
+    # Read in if we should mask small components of Xi.
+    Settings["Mask Small Xi Components"] = Read_Bool_Setting(File, "Mask Small Xi Components [bool]:");
 
 
     ############################################################################
@@ -126,7 +128,7 @@ def Settings_Reader() -> Dict:
     # Read the learning rate, number of epochs.
     Settings["Learning Rate"] = float(Read_Setting(File, "Learning Rate [float]:"));
     Settings["Num Epochs"]    = int(  Read_Setting(File, "Number of Epochs [int]:"));
-
+    
 
 
     ############################################################################

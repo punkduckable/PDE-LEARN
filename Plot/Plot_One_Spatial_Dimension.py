@@ -150,12 +150,14 @@ def Plot_U( Load_File_Name          : str,
         # do this in batches to conserve memory.
         kth_Residual_Coords : torch.Tensor  = torch.empty_like(kth_U_Coords);
 
+        Mask            : torch.Tensor  = torch.ones(Num_RHS_Terms, dtype = torch.bool);
         Num_Coords      : int           = kth_torch_Inputs.shape[0];
         Num_Batches     : int           = Num_Coords // 1000;
         for i in range(Num_Batches):
             kth_Residual_Coords[i*1000 : (i + 1)*1000] = Coll_Loss(
                                                         U           = U_List[k],
                                                         Xi          = Xi,
+                                                        Mask        = Mask,
                                                         Coll_Points = kth_torch_Inputs[i*1000:(i + 1)*1000, :],
                                                         Derivatives = Derivatives,
                                                         LHS_Term    = LHS_Term,
@@ -166,6 +168,7 @@ def Plot_U( Load_File_Name          : str,
             kth_Residual_Coords[Num_Batches*1000:] = Coll_Loss(
                                                     U           = U_List[k],
                                                     Xi          = Xi,
+                                                    Mask        = Mask,
                                                     Coll_Points = kth_torch_Inputs[Num_Batches*1000:, :],
                                                     Derivatives = Derivatives,
                                                     LHS_Term    = LHS_Term,
