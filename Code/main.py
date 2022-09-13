@@ -28,6 +28,10 @@ from Plot               import Plot_Losses;
 
 
 
+Threshold : float = 0.001;
+
+
+
 def main():
     # Load the settings, print them.
     Settings : Dict = Settings_Reader();
@@ -109,8 +113,8 @@ def main():
 
             # Report!
             print("Loaded U[%u] from state." % i);
-            print("    Hidden Activation:   %s" % Hidden_Activation);
-            print("    Widths:              %s" % str(Widths), end = '');
+            print("    Hidden Activation:     %s" % Hidden_Activation);
+            print("    Widths:                %s\n" % str(Widths));
 
     else:
         # First, set up Widths. This is an array whose ith entry specifies the width of 
@@ -172,9 +176,16 @@ def main():
         print("Build Xi, Library using settings in Settings.txt");
     
     # Report!
+    print("    Xi:                    [", end = '');
+    for k in range(Num_RHS_Terms):
+        print("%.5f" % Xi[k].item(), end = '');
+        if(k == Num_RHS_Terms - 1):
+            print(" ]");
+        else:
+            print(", ", end = '');
+
     print("    LHS Term:              %s" % str(Settings["LHS Term"]))
     print("    RHS Terms (%3u total): " % Num_RHS_Terms, end = '');
-
     for i in range(Num_RHS_Terms):
         print(str(Settings["RHS Terms"][i]), end = '');
         
@@ -187,8 +198,9 @@ def main():
     Mask : torch.Tensor = torch.zeros(Num_RHS_Terms, dtype = torch.bool);
     if(Settings["Load Xi, Library"] == True and Settings["Mask Small Xi Components"] == True):
         for i in range(Num_RHS_Terms):
-            if(abs(Xi[i].item()) < 5e-4):
+            if(abs(Xi[i].item()) < Threshold):
                 Mask[i] = True;   
+    print("Masking %u RHS terms\n" % torch.sum(Mask));
 
 
     ############################################################################
@@ -365,7 +377,7 @@ def main():
                     print("Epoch #%-4d |       \t Lp      = %.7f\t L2[%u]   = %.7f" % (t + 1, Test_Dict["Lp Loss"], i, Test_Dict["L2 Losses"][i]));
                 else: 
                     print("            |       \t Lp      = %.7f\t L2[%u]   = %.7f" % (Test_Dict["Lp Loss"], i, Test_Dict["L2 Losses"][i]));
-                print("            |");
+                print("            |");                
         else:
             print("Epoch #%-4d | \t" % (t + 1), end = '');
             for i in range(Num_DataSets):
@@ -378,8 +390,14 @@ def main():
 
 
     ############################################################################
-    # Threshold Xi.
+    # Report final PDE.
 
+    # Print the LHS Term.
+    print();
+    print(Settings["LHS Term"], end = '');
+    print(" = ", end = '');
+
+    # Print the RHS terms, with thresholding. 
     # Recall how we enforce Xi: We trick torch into minimizing
     #       [Xi]_1^p + ... + [Xi]_n^p,
     # which is highly concave (for p < 1), by instead minimizing
@@ -392,36 +410,19 @@ def main():
     #       w_i = max{1e-7, [Xi]_i^{p - 2}}.
     # The issue with this approach is that the Lp loss can't really resolve
     # components of Xi which are smaller than about 3e-4. To deal with this, we
-    # ignore all components smaller than 5e-4.
-    #
-    # Note: Switching to double precision would allow us to drop this number
-    # further.
-    Pruned_Xi = torch.empty_like(Xi);
-    N   : int = Xi.numel();
-    for k in range(N):
-        Abs_Xi_k = abs(Xi[k].item());
-        if(Abs_Xi_k < 5e-4):
-            Pruned_Xi[k] = 0;
-        else:
-            Pruned_Xi[k] = Xi[k];
-
-
-    ############################################################################
-    # Report final PDE
-
-    # Print the LHS Term.
-    print();
-    print(Settings["LHS Term"], end = '');
-    print(" = ");
-
-    # Print the RHS terms
-    for i in range(len(Settings["RHS Terms"])):
-        if(Pruned_Xi[i] != 0):
-            if(i != 0):
-                print(" + ", end = '');
-            print("%7.4f" % Pruned_Xi[i], end = '');
-            print(Settings["RHS Terms"][i], end = '');
-
+    # ignore all components smaller than the threshold (which should be set to 
+    # be slightly larger than 3e-4)
+    for k in range(len(Settings["RHS Terms"])):
+        # Skip if the term if masked, or thresholded.
+        if(Mask[k] == True):
+            continue;
+        elif(abs(Xi[k].item()) < Threshold):
+            continue;
+        
+        if(k != 0):
+            print(" + ", end = '');
+        print("%7.4f" % Xi[k], end = '');
+        print(Settings["RHS Terms"][k], end = '');
     # End the line.
     print();
 

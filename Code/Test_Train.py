@@ -18,6 +18,7 @@ from    Derivative import Derivative;
 from    Term       import Term;
 
 
+
 def Training(   U_List              : List[Network],
                 Xi                  : torch.Tensor,
                 Mask                : torch.Tensor,
@@ -140,6 +141,7 @@ def Training(   U_List              : List[Network],
 
         # First, calculate the L2 loss, since it is not specific to each data set.
         Lp_Loss_Value = Lp_Loss(    Xi      = Xi,
+                                    Mask    = Mask,
                                     p       = p);
         Lp_Loss_Buffer = Lp_Loss_Value.detach().item()
 
@@ -290,6 +292,7 @@ def Testing(    U_List              : List[Network],
     
     # First, evaluate the Lp loss, since this does not depend on the data set.
     Lp_Loss_Value : float = Lp_Loss(    Xi    = Xi,
+                                        Mask  = Mask,
                                         p     = p).item();
 
     # Get the losses for each data set.

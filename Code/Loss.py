@@ -214,7 +214,7 @@ def Coll_Loss(
     for j in range(len(RHS_Terms)):
         # Check if the jth term is masked. If so, move on.
         if(Mask[j] == True):
-            L_U_Xi += 0*Xi[j];
+            L_U_Xi += 0.0*Xi[j];
             continue;
     
         # Get the term.
@@ -249,18 +249,23 @@ def Coll_Loss(
 
 
 
-def Lp_Loss(Xi : torch.Tensor, p : float):
+def Lp_Loss(Xi : torch.Tensor, Mask : torch.Tensor, p : float):
     """ 
     This function approximates the L0 norm of Xi using the following quantity:
         w_1*|Xi[1]|^2 + w_2*|Xi[2]|^2 + ... + w_N*|Xi[N]|^2
     Where, for each k,
-        w_k = 1/max{delta, |Xi[k]|^{p - 2}}.
+        w_k =   1/max{delta, |Xi[k]|^{p - 2}}       if Mask[k] == False
+                0                                   if Mask[k] == True
     (where delta is some small number that ensures we're not dividing by zero!)
 
     ----------------------------------------------------------------------------
     Arguments:
 
     Xi: The Xi vector in our setup. This should be a one-dimensional tensor.
+
+    Mask: A boolean tensor whose shape matches that of Xi. When adding the kth 
+    RHS term to the Library_Xi product, we check if Mask[k] == False. If so, 
+    We add 0*Xi[k]. Otherwise, we compute the kth library term as usual.
 
     p: The "p" in in the expression above
 
@@ -283,6 +288,10 @@ def Lp_Loss(Xi : torch.Tensor, p : float):
     W               = torch.empty_like(Xi_Detach);
     N : int         = W.numel();
     for k in range(N):
+        if(Mask[k] == True):
+            W[k] = 0.0;
+            continue;
+
         # First, obtain the absolute value of the kth component of Xi, as a float.
         Abs_Xi_k    : float = abs(Xi[k].item());
 
