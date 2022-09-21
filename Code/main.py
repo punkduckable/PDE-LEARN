@@ -175,6 +175,10 @@ def main():
                     
         print("Build Xi, Library using settings in Settings.txt");
     
+    # Make a copy of Xi. We will use this after training to counter momentum 
+    # (see below)
+    Initial_Xi = torch.clone(Xi);
+
     # Report!
     print("    Xi:                    [", end = '');
     for k in range(Num_RHS_Terms):
@@ -384,6 +388,24 @@ def main():
                 print("\t Targeted[%u] = %3d \t Cutoff[%u] = %.7f "   % (i, Targeted_Coll_Pts_List[i].shape[0], i, Cutoff), end = '');
             print();
 
+    # Finally, replaced the final masked components of Xi with their 
+    # pre-training values.  Why do we do this? It's complicated.... Some
+    # optimizers have momentum. This means that even if the derivative of the
+    # loss function with respect to a parameter is zero, the optimizer may 
+    # still update the value of that parameter. This creates a big problem for
+    # masked RHS terms. If a RHS term is masked, we do not want its component
+    # of Xi to change. The collocation and Lp loss functions are built such
+    # that if a term is masked, the corresponding component of Xi will have NO
+    # impact on the loss (so the derivative of the loss function with respect
+    # to that component of Xi is zero).... but momentum still allows the 
+    # parameter to change. To fix this, replace the final masked components of 
+    # Xi with their original ones. 
+    Xi.requires_grad_(False);
+    for k in range(Num_RHS_Terms):
+        if(Mask[k] == True):
+            Xi[k] = Initial_Xi[k];
+    Xi.requires_grad_(True);
+
     # Report runtime!
     Epoch_Runtime : float = time.perf_counter() - Epoch_Timer;
     print("Done! It took %7.2fs, an average of %7.2fs per epoch)" % (Epoch_Runtime,  (Epoch_Runtime / Settings["Num Epochs"])));
@@ -412,6 +434,7 @@ def main():
     # components of Xi which are smaller than about 3e-4. To deal with this, we
     # ignore all components smaller than the threshold (which should be set to 
     # be slightly larger than 3e-4)
+    Num_Terms_Printed : int = 0;
     for k in range(len(Settings["RHS Terms"])):
         # Skip if the term if masked, or thresholded.
         if(Mask[k] == True):
@@ -419,10 +442,14 @@ def main():
         elif(abs(Xi[k].item()) < Threshold):
             continue;
         
-        if(k != 0):
+        if(  Num_Terms_Printed != 0 and Xi[k] > 0):
             print(" + ", end = '');
-        print("%7.4f" % Xi[k], end = '');
+        elif(Xi[k] < 0):
+            print(" - ", end = '');
+        print("%7.4f" % torch.abs(Xi[k]), end = '');
+
         print(Settings["RHS Terms"][k], end = '');
+        Num_Terms_Printed += 1;
     # End the line.
     print();
 
