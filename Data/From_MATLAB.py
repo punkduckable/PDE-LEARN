@@ -12,11 +12,11 @@ Make_Plot : bool = True;
 
 def main():
     # Specify settings.
-    Data_File_Name          : str   = "KdV_Sine";
+    Data_File_Name          : str   = "KS_Sine";
     Num_Spatial_Dimensions  : int   = 1;
-    Noise_Proportion        : float = 0.0;
+    Noise_Proportion        : float = 0.15;
 
-    Num_Train_Examples      : int   = 250;
+    Num_Train_Examples      : int   = 4000;
     Num_Test_Examples       : int   = 1000;
 
     # Now pass them to "From_MATLAB".
