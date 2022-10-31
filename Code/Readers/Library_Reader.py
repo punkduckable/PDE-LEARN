@@ -22,10 +22,12 @@ def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
     """ 
     This function reads a Sub-Term; That is, an expression of the following 
     form:
-            (D_x^i D_y^j D_t^k u)^p
-    In general, there may or may not be a power, p. If not, there may or may not
-    be a set of parenthesis. Likewise, there may or may not be any partial
-    derivatives.
+            "(D_x^i D_y^j D_t^k u)^p"
+    or
+            "D_x^i D_y^j D_t^k u^p"
+    In general, there may or may not be a power, p. Likewise, there may or may
+    not be spaces between the derivative term and the '^', or between the '^' 
+    and the power. Finally, there may or may not be any partial derivatives.
 
     ----------------------------------------------------------------------------
     Arguments:
@@ -36,46 +38,52 @@ def Parse_Sub_Term(Buffer : str) -> Tuple[Derivative, int]:
     here, p must be a natural number. If there is no exponent, we infer p = 1. 
     """
 
-    # First, check if there are parenthesis. If so, split by the closing
-    # one, and remove the first.
+    # First, split the term along the "u" or "U". This separates the partial 
+    # derivative operator from the power (if there is one).    
+    if('u' in Buffer):
+        Components : List[str] = Buffer.split('u');
+    else:
+        Components : List[str] = Buffer.split('U');
+    
+    D_Component : str = Components[0].strip();
+    p_Component : str = Components[1].strip();
+
+    # The p_component is either empty, ")", of the form "^p", or of the 
+    # form ")^p". In the first two cases, the power is 1. In the latter two, 
+    # we can extract the power by splitting along the '^' character.
     Power : int = 1;
-    if(')' in Buffer):
-        Components = Buffer.split(')');
+    if('^' in p_Component):
+        Power = int(p_Component.split('^')[1].strip());
 
-        # The first component should look like (D_x^i D_y^j D_t^k u, remove the
-        # opening parenthesis.
-        Buffer = Components[0][1:];
-
-        # If there is a second component, it should be of the form ^p. If so,
-        # parse p.
-        if(len(Components[1]) != 0):
-            Power = int(Components[1][1:]);
-
-    # At this point, the Buffer should be of the form D_x^i D_y^j D_t^k u. Let's
-    # rule out the case when there are no derivatives.
-    if('D' not in Buffer):
-        # In this case, we can construct the Derivative.
+    # First, let's handle the case when there are no derivatives. In this case, 
+    # the Sub-term is of the form U^p or (U)^p. In the former case, D_Component 
+    # is empty, while in the latter it is "(". Further, there are the only 
+    # cases where D_Component can have a length of less than 2. 
+    if(len(D_Component) < 2):
+        # In this case, we the derivative operator is just the identity.
         Encoding    : numpy.ndarray = numpy.zeros(shape = (2), dtype = numpy.int32);
         D           : Derivative    = Derivative(Encoding = Encoding);
-
+       
         # And now we're done!
         return (D, Power);
 
-    # Assuming there is a derivative, we can now remove the "u".
-    Buffer = Buffer[:-1].strip();
+    # The D_component should either be of the form "(D_x^i D_y^j D_t^k " or 
+    # "D_x^i D_y^j D_t^k ". In the former case, we can just remove the '('.
+    if(D_Component[0] == '('):
+        D_Component = D_Component[1:];
 
-    # The buffer should now be of the form D_x^i D_y^j D_t^k. It's time to
-    # split the derivatives into their components.
-    Components : list[str] = Buffer.split(' ');
+    # At this point, the D_Component should be of the form "D_x^i D_y^j D_t^k".
+    # It's time to split the derivatives into their components.
+    D_Components : list[str] = D_Component.split(' ');
 
     # Each component should be of the form D_s^i or D_s, where i > 0, and s is
     # t, x, y, or z.
-    Num_Derivative_Terms    : int           = len(Components);
+    Num_Derivative_Terms    : int           = len(D_Components);
     Encoding                : numpy.ndarray = numpy.zeros(shape = (4), dtype = numpy.int32);
 
     for i in range(Num_Derivative_Terms):
         # First, send everything to lower case (this makes processing easier).
-        Component : str = Components[i].lower();
+        Component : str = D_Components[i].lower();
 
         # First, split at the '_'. The first character after this contains
         # the variable.
