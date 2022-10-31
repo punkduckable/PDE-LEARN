@@ -1,5 +1,5 @@
 % KdV equation: D_t U = -(D_x^3 U) - (D_x U)(U)
-% with U(x, 0) = -exp(-pi*(x/30)^2)*cos(pi*x/10)
+% with U(x, 0) = exp(-pi*(x/30)^2)*cos(pi*x/10)
 
 % Set up the problem domain. I want this to run on
 %       (t, x) in [0,40] x [-10, 10]
@@ -19,7 +19,7 @@ T_span  = linspace(t_l, t_h, Nt);
 S           = spinop(Domain, T_span);
 S.lin       = @(u) -1.0*diff(u,3);
 S.nonlin    = @(u) -0.5*diff(u.^2);
-S.init      = chebfun(@(x) -exp(-pi*(x/30)^2)*cos(pi*x/10), Domain, 'vectorize');
+S.init      = chebfun(@(x) exp(-pi*(x/30)^2)*cos(pi*x/10), Domain, 'vectorize');
 
 
 % Solve!
@@ -53,4 +53,4 @@ pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
 
 xlabel('time (s)');
 ylabel('position (m)');
-title("Korteweg–De Vries equation dataset");
+title("Korteweg–De Vries equation Exp-Cos dataset");

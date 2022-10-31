@@ -1,6 +1,5 @@
 % KdV equation: D_t U = -(D_x^3 U) - (D_x U)(U)
-% with U(x, 0) = -sin(pi*x/20);
-
+% with U(x, 0) = -sin(pi*x/20)
 
 % Set up the problem domain. I want this to run on
 %       (t, x) in [0,40] x [-10, 10]
@@ -13,7 +12,7 @@ Domain  = [x_l, x_h];
 T_span  = linspace(t_l, t_h, Nt);
 
 
-% Set up the spinop for Burger's equation. For this problem:
+% Set up the spinop for the KdV's equation. For this problem:
 %       L(u)    = -(D_x^3 U)
 %       N(u)    = -(U)(D_x U).
 %       Init(x) = -sin(pi*x/10)
@@ -54,4 +53,4 @@ pcolor(t, x, usol); shading interp, colorbar, axis tight, colormap(jet);
 
 xlabel('time (s)');
 ylabel('position (m)');
-title("Korteweg–De Vries equation dataset");
+title("Korteweg–De Vries equation Sine dataset");

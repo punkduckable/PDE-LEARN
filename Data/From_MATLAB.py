@@ -12,11 +12,11 @@ Make_Plot : bool = True;
 
 def main():
     # Specify settings.
-    Data_File_Name          : str   = "KS_Sine";
-    Num_Spatial_Dimensions  : int   = 1;
-    Noise_Proportion        : float = 0.15;
+    Data_File_Name          : str   = "Heat_Exp_Cos_2D";
+    Num_Spatial_Dimensions  : int   = 2;
+    Noise_Proportion        : float = .0;
 
-    Num_Train_Examples      : int   = 4000;
+    Num_Train_Examples      : int   = 10000;
     Num_Test_Examples       : int   = 1000;
 
     # Now pass them to "From_MATLAB".
@@ -211,17 +211,30 @@ def From_MATLAB_2D( Data_File_Name      : str,
 
     # Generate the grid of (t, x, y) coordinates. The i,j,k entry of usol should
     # hold the value of the solution at the i,j,k coordinate.
-    t_coords_matrix, x_coords_matrix, y_coords_matrix = numpy.meshgrid(t_points, x_points, y_points);
+    num_t_values : int = t_points.size;
+    num_x_values : int = x_points.size;
+    num_y_values : int = y_points.size;
 
+    t_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
+    x_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
+    y_coords_matrix = numpy.empty((num_t_values, num_x_values, num_y_values), dtype = numpy.float32);
+
+    for i in range(num_t_values):
+        for j in range(num_x_values):
+            for k in range(num_y_values):
+                t_coords_matrix[i, j, k] = t_points[i];
+                x_coords_matrix[i, j, k] = x_points[j];
+                y_coords_matrix[i, j, k] = y_points[k];
+    
     # Now, stitch successive the rows of the coordinate matrices together
     # to make a 1d array. We interpret the result as a 1 column matrix.
-    t_coords_1D : numpy.ndarray = t_coords_matrix.flatten().reshape(-1, 1);
-    x_coords_1D : numpy.ndarray = x_coords_matrix.flatten().reshape(-1, 1);
-    y_coords_1D : numpy.ndarray = y_coords_matrix.flatten().reshape(-1, 1);
+    t_coords_1D : numpy.ndarray = t_coords_matrix.reshape(-1, 1);
+    x_coords_1D : numpy.ndarray = x_coords_matrix.reshape(-1, 1);
+    y_coords_1D : numpy.ndarray = y_coords_matrix.reshape(-1, 1);
 
     # Generate data coordinates, corresponding Data Values.
     All_Data_Coords : numpy.ndarray = numpy.hstack((t_coords_1D, x_coords_1D, y_coords_1D));
-    All_Data_Values : numpy.ndarray = Noisy_Data_Set.flatten();
+    All_Data_Values : numpy.ndarray = Noisy_Data_Set.reshape(-1);
 
     # Next, generate the Testing/Training sets. To do this, we sample a uniform
     # distribution over subsets of {1, ... , N} of size Num_Train_Examples,
