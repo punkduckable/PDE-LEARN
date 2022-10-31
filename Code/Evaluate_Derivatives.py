@@ -11,6 +11,7 @@ sys.path.append(Classes_Path);
 
 from    typing      import Tuple, List;
 import  torch;
+import  numpy;
 
 from    Derivative  import Derivative;
 
@@ -70,18 +71,28 @@ def Derivative_From_Derivative(
     # Now, let's get to work. The plan is the following: Since Db is a child of
     # Da, there is some derivative operator, Dc, such that
     #       Da = Dc Db
-    # In particular, if Da.Encoding = [p_1, ... , p_n] and Db.Encoding = [q_1,
-    # ... , q_m], then Dc.Encoding = [p_1 - q_1, ... , p_l - q_l], where
-    # l = min{n, m}. Thus, to compute Da U from Db U, we first compute
+    # In particular, if Da.Encoding = [p_1, ... , p_l] and Db.Encoding = [q_1,
+    # ... , q_l], then Dc.Encoding = [p_1 - q_1, ... , p_l - q_l]. Thus, to 
+    # compute Da U from Db U, we first compute
     #       D_t^{p_1 - q_1} Da U.
     # From this, we calculate
     #        D_x^{p_2 - q_2} D_t^{p_1 - q_1} Db U.
     # And so on.
 
+    # To make things easier, if Da.Encoding is shorter than Db.Encoding, we pad
+    # the end of Da.Encoding with zeros until the two have the same length. We 
+    # do the same thing to Db.Encoding if it is shorter than Da.Encoding.
     n : int = len(Da.Encoding);
     m : int = len(Db.Encoding);
-    l : int = min(n, m);
+    l : int = max(n, m);
 
+    Da_Encoding_Padded : numpy.ndarray = numpy.zeros(l, dtype = numpy.int32);
+    Db_Encoding_Padded : numpy.ndarray = numpy.zeros(l, dtype = numpy.int32);
+
+    for k in range(n):
+        Da_Encoding_Padded[k] = Da.Encoding[k];
+    for k in range(m):
+        Db_Encoding_Padded[k] = Db.Encoding[k];
 
 
     ############################################################################
@@ -90,7 +101,7 @@ def Derivative_From_Derivative(
     # Initialize Dt_Db_U. If there are no t derivatives, then Dt_Db_U = Db_U.
     Dt_Db_U : torch.Tensor = Db_U;
 
-    Dt_Order : int = Da.Encoding[0] - Db.Encoding[0];
+    Dt_Order : int = Da_Encoding_Padded[0] - Db_Encoding_Padded[0];
     if(Dt_Order > 0):
         # Suppose Dt_Order = m. Compute D_t^k Db_U from D_t^{k - 1} Db_U for
         # each k in {1, 2, ... , m}.
@@ -115,7 +126,7 @@ def Derivative_From_Derivative(
     # = Dt_Db_U.
     Dx_Dt_Db_U : torch.Tensor = Dt_Db_U;
 
-    Dx_Order : int = Da.Encoding[1] - Db.Encoding[1];
+    Dx_Order : int = Da_Encoding_Padded[1] - Db_Encoding_Padded[1];
     if(Dx_Order > 0):
         # Suppose Dx_Order = m. We compute D_x^k Dt_Db_U from
         # D_t^{k - 1} Dt_Db_U for each k in {1, 2, ... , m}.
@@ -140,12 +151,12 @@ def Derivative_From_Derivative(
     # we're done.
     if(l < 3):
         return Dx_Dt_Db_U;
-
+    
     # Assuming we need y derivatives, initialize Dy_Dx_Dt_Db_U. If there are no
     # y derivatives, then Dy_Dx_Dt_Db_U = Dx_Dt_Db_U.
     Dy_Dx_Dt_Db_U : torch.Tensor = Dx_Dt_Db_U;
 
-    Dy_Order : int = Da.Encoding[2] - Db.Encoding[2];
+    Dy_Order : int = Da_Encoding_Padded[2] - Db_Encoding_Padded[2];
     if(Dy_Order > 0):
         # Suppose Dy_Order = m. We compute D_y^k Dx_Dt_Db_U from
         # D_y^{k - 1} Dx_Dt_Db_U for each k in {1, 2, ... , m}.
@@ -176,7 +187,7 @@ def Derivative_From_Derivative(
     # z derivatives, then Dz_Dy_Dx_Dt_Db_U = Dy_Dx_Dt_Db_U.
     Dz_Dy_Dx_Dt_Db_U : torch.Tensor = Dy_Dx_Dt_Db_U;
 
-    Dz_Order : int = Da.Encoding[3] - Db.Encoding[3];
+    Dz_Order : int = Da_Encoding_Padded[3] - Db_Encoding_Padded[3];
     if(Dz_Order > 0):
         # Suppose Dz_Order = m. We compute D_z^k Dy_Dx_Dt_Db_U from
         # D_z^{k - 1} Dy_Dx_Dt_Db_U for each k in {1, 2, ... , m}.

@@ -100,7 +100,7 @@ class Derivative():
 
     def Is_Child_Of(self, D) -> bool:
         """ 
-        This function determines if D is a "child" of the derivative operator 
+        This function determines if self is a "child" of the derivative operator 
         D. What does this mean? Let D_1 and D_2 be derivative objects.
         Let [p_1, ... , p_n] and [q_1, ... , q_m] denote D_1's and D_2's
         encoding vectors, respectively. Let l = min{n, m}. D_1 is a child of
@@ -113,7 +113,6 @@ class Derivative():
 
         D : A derivative operator. This function determines if self is a child
         of D.
-
 
         ------------------------------------------------------------------------
         Returns:
