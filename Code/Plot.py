@@ -138,7 +138,7 @@ def Plot_Losses(Save_File_Name      : str,
     plt.ylabel("Loss");
     plt.savefig(Plot_Directory_Path + "/Lp_Loss.png", dpi = 500);
 
-    # Make a figure for the history of the Dt Z loss.
+    # Make a figure for the history of the L2 loss.
     plt.figure(4);
     plt.clf();
     seaborn.lineplot(data = L2_DF, x = "Epoch Number", y = "Losses", hue = "Experiment", palette = palette);
