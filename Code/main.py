@@ -28,7 +28,7 @@ from Plot               import Plot_Losses;
 
 
 
-Threshold : float = 0.001;
+Threshold : float = 0.0005;
 
 
 
@@ -43,12 +43,31 @@ def main():
     print("\nSetting up...\n");
 
 
+
+    ############################################################################
+    # Load the saved state, if we need it.
+
+    # First, if we are loading anything, load in the save.
+    if( Settings["Load U"]              == True or 
+        Settings["Load Xi, Library"]    == True or
+        Settings["Load Optimizer"]      == True):
+
+        # Load the saved checkpoint. Make sure to map it to the correct device.
+        Load_File_Path : str = "../Saves/" + Settings["Load File Name"];
+        Saved_State = torch.load(Load_File_Path, map_location = Settings["Device"]);
+
+
+
     ############################################################################
     # Set up Data
     # This sets up the testing/training inputs/targets, and the input bounds.
     # This will also tell us the number of spatial dimensions (there's a row of
     # Input_Bounds for each coordinate component. Since one coordinate is for
     # time, one minus the number of rows gives the number of spatial dimensions).
+
+    # Load the data set names if they were saved. 
+    if(Settings["Load U"] == True):
+        Settings["DataSet Names"] = Saved_State["DataSet Names"];
 
     Num_DataSets    : int                       = len(Settings["DataSet Names"]);
     Data_Dict       : Dict[str, numpy.ndarray]  = { "Train Inputs"          : [],
@@ -75,18 +94,9 @@ def main():
         assert(Data_Dict["Number of Dimensions"][i] == Num_Dimensions);
 
 
+
     ############################################################################
     # Set up U for each data set, as well as the common Xi, Library, and mask.
-
-    # First, if we are loading anything, load in the save.
-    if( Settings["Load U"]              == True or 
-        Settings["Load Xi, Library"]    == True or
-        Settings["Load Optimizer"]      == True):
-
-        # Load the saved checkpoint. Make sure to map it to the correct device.
-        Load_File_Path : str = "../Saves/" + Settings["Load File Name"];
-        Saved_State = torch.load(Load_File_Path, map_location = Settings["Device"]);
-
 
     # First, either build U or load its state from save. 
     if(Settings["Load U"] == True):
@@ -120,7 +130,7 @@ def main():
         # First, set up Widths. This is an array whose ith entry specifies the width of 
         # the ith layer of the network (including the input and output layers).
         Widths = [Num_Dimensions] + Settings["Hidden Layer Widths"] + [1];
-        
+
         # Now initialize each U[i].
         U_List : List[Network] = [];
         for i in range(Num_DataSets):
@@ -207,6 +217,7 @@ def main():
     print("Masking %u RHS terms\n" % torch.sum(Mask));
 
 
+
     ############################################################################
     # Set up the optimizer.
     # Note: we need to do this after loading Xi, since loading Xi potentially
@@ -238,6 +249,7 @@ def main():
     print("Set up complete! Took %7.2fs" % (time.perf_counter() - Setup_Timer));
 
 
+
     ############################################################################
     # Run the Epochs!
 
@@ -267,6 +279,7 @@ def main():
     # Epochs!!!
     print("\nRunning %d epochs..." % Settings["Num Epochs"]);
     for t in range(0, Settings["Num Epochs"]):
+        
         ########################################################################
         # Train
 
@@ -303,6 +316,7 @@ def main():
             Train_Losses[i]["Data Losses"][t]  = Train_Dict["Data Losses"][i];
             Train_Losses[i]["Coll Losses"][t]  = Train_Dict["Coll Losses"][i];
             Train_Losses[i]["Total Losses"][t] = Train_Dict["Total Losses"][i];
+
 
 
         ########################################################################
@@ -344,6 +358,7 @@ def main():
             L2_Losses[i][t] = Test_Dict["L2 Losses"][i];
 
 
+
         ########################################################################
         # Update targeted residual points.
 
@@ -367,6 +382,7 @@ def main():
 
             # Keep the corresponding collocation points.
             Targeted_Coll_Pts_List[i] = Train_Coll_Points_List[i][Big_Residual_Indices, :].detach();
+
 
 
         ########################################################################
@@ -411,6 +427,7 @@ def main():
     print("Done! It took %7.2fs, an average of %7.2fs per epoch)" % (Epoch_Runtime,  (Epoch_Runtime / Settings["Num Epochs"])));
 
 
+
     ############################################################################
     # Report final PDE.
 
@@ -452,6 +469,7 @@ def main():
         Num_Terms_Printed += 1;
     # End the line.
     print();
+
 
 
     ############################################################################
@@ -501,10 +519,12 @@ def main():
                 "Optimizer"             : Optimizer.state_dict(),
                 "Derivative Encodings"  : Derivative_Encodings,
                 "LHS Term State"        : LHS_Term_State,
-                "RHS Term States"       : RHS_Term_States},
+                "RHS Term States"       : RHS_Term_States, 
+                "DataSet Names"        : Settings["DataSet Names"]},
                 "../Saves/" + Save_File_Name);
 
     print("Done! Saved as \"%s\"" % Save_File_Name);
+
 
 
     ############################################################################

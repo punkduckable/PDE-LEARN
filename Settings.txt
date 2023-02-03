@@ -8,7 +8,6 @@ Load Optimizer from Save [bool]:                 False
     Load File Name [str]:                        
 
 
-
 ################################################################################
 # Library Settings.
 
@@ -35,7 +34,7 @@ Train on CPU or GPU [GPU, CPU]:                  cpu
 # Loss settings.
 
 p [float]:                                       .1
-Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.0, "L2" : 0.00001}
+Weights [Dict of float]:                         {"Data" : 1.0, "Coll" : 1.0, "Lp" : 0.000, "L2" : 0.000005}
 
 Number of Training Collocation Points [int]:     3000
 Number of Testing Collocation Points [int]:      1000
@@ -50,12 +49,13 @@ Mask Small Xi Components [bool]:                 True
 # Optimizer settings.
 
 Optimizer [Adam, LBFGS]:                         Adam
-Learning Rate [float]:                           .0005
-Number of Epochs [int]:                          1500
+Learning Rate [float]:                           .001
+Number of Epochs [int]:                          1000
 
 
 
 ################################################################################
 # Data settings.
+# You can ignore this setting if you are loading U from save. 
 
-DataSet Names [List of str]:                     [Burgers_Sine_N25_P5000]
+DataSet Names [List of str]:                     [Burgers_Sine_N75_P2000]

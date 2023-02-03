@@ -134,8 +134,10 @@ def Settings_Reader() -> Dict:
     ############################################################################
     # Data settings.
 
-    # Data file name. Note that the data file should NOT contain noise.
-    Settings["DataSet Names"] =  Read_List_Setting(File, "DataSet Names [List of str]:");
+    # Read in the list of datasets, assuming we are not loading U from file. 
+    # Otherwise, the data set names should have been saved in the save sate.
+    if(Settings["Load U"] == False):
+        Settings["DataSet Names"] = Read_List_Setting(File, "DataSet Names [List of str]:");
 
     # All done! Return the settings!
     File.close();

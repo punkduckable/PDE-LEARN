@@ -100,9 +100,10 @@ class Term():
         -----------------------------------------------------------------------
         Returns:
 
-        A dictionary with two keys, "Derivatives" and "Powers". The former is a
-        list whose ith entry holds the Encoding array for the ith library term.
-        The latter is simply self's power attribute.
+        A dictionary with two keys, "Derivative Encodings" and "Powers". The 
+        former is a list whose ith entry holds the Encoding array for the ith 
+        derivative of the library term. The latter is simply self's power 
+        attribute.
         """
 
         # We can start things off with the Powers attribute.
