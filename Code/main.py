@@ -520,7 +520,7 @@ def main():
                 "Derivative Encodings"  : Derivative_Encodings,
                 "LHS Term State"        : LHS_Term_State,
                 "RHS Term States"       : RHS_Term_States, 
-                "DataSet Names"        : Settings["DataSet Names"]},
+                "DataSet Names"         : Settings["DataSet Names"]},
                 "../Saves/" + Save_File_Name);
 
     print("Done! Saved as \"%s\"" % Save_File_Name);
